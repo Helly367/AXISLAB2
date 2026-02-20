@@ -1,27 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-vert-foret: #059669;
-  --color-vert-menthe: #34d399;
-  --color-blanc-casser: #f8fafc;
-  --color-beige: #f3f4f65b;
-  --color-orage-corail: #f97316;
+  --color-blue: #143172 ;
   --color-opacity: rgba(0, 0, 0, 0.507);
-  --color-bleu-royal: #2563eb;
-  --color-bleu-clair: #2563eb;
   --color-gris-anthracite: #1f2937;
   --color-gris-sombre: rgba(94, 93, 93, 0.658);
   --color-flou : rgba(0, 0, 0, 0.493) ;
-  --color-vert-succes: #10b981;
-}
 
-.bg-image {
-  background-image: url("../assets/images/fond.jpg");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center;
-}
-
-.cogaye{
-  color: rgba(0, 0, 0, 0.493);
 }
