@@ -49,23 +49,17 @@ const OpenProject = () => {
 
     return (
         <div className="w-full h-full bg-gray-50 overflow-y-auto">
-            {/* Header avec logo */}
-            <div className="bg-white shadow-sm py-4 px-6">
-                <div className="max-w-7xl mx-auto">
-                    <img src={axis} alt="Axis" className="h-12 w-auto" />
-                </div>
-            </div>
 
             {/* Contenu principal */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto ">
+
                 {/* Barre de recherche et boutons */}
-                <div className="flex flex-col items-center mb-12">
-                    <h1 className="text-3xl font-bold text-gray-800 mb-8">
-                        Mes Projets
-                    </h1>
+                <div className="flex items-center justify-between gap-4  px-6 py-8">
+
+                    <img src={axis} alt="Axis" className="h-10 w-auto" />
 
                     {/* Barre de recherche */}
-                    <div className="w-full max-w-2xl mb-6">
+                    <div className="w-full max-w-2xl">
                         <div className="relative">
                             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                             <input
@@ -93,7 +87,7 @@ const OpenProject = () => {
 
                 {/* Grille des projets */}
                 {filteredProjects.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-6 py-8">
                         {filteredProjects.map((project) => (
                             <div
                                 key={project.id}
@@ -136,7 +130,7 @@ const OpenProject = () => {
                     </div>
                 ) : (
                     // Message si aucun projet trouvé
-                    <div className="text-center py-12">
+                        <div className="text-center py-12 px-6">
                         <p className="text-gray-500 text-lg">
                             Aucun projet trouvé
                         </p>
