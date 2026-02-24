@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import Profile from '../Profile';
+import StructureProjet from '../Structure';
+import Equipe from '../Equipe';
+import BudgetManager from '../BudgetManager';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import axis from "../../../../../resources/axis.png"
 
@@ -12,10 +15,9 @@ import {
     Payment,
     LocalLibrary,
     Assessment,
-    Star,
-    TrendingUp,
-    EmojiEvents,
-    Person2Rounded
+    Person2Rounded,
+    Schema,
+    Groups
 } from '@mui/icons-material';
 
 
@@ -26,9 +28,9 @@ const Dashboard = () => {
 
     const menuItems = [
         { name: 'Profile', icon: <Person2Rounded />, link: "/profile" },
-        { name: 'Students', icon: <School /> },
-        { name: 'Teachers', icon: <Person /> },
-        { name: 'Courses', icon: <MenuBook /> },
+        { name: 'Structure', icon: <Schema />, link: "/structure" },
+        { name: 'Equipe', icon: <Groups />, link: "/equipe" },
+        { name: 'Budjet', icon: <MenuBook />, link: "/budjet" },
         { name: 'Live Class', icon: <VideoCall /> },
         { name: 'Attendance', icon: <CalendarToday /> },
         { name: 'Payments', icon: <Payment /> },
@@ -55,7 +57,7 @@ const Dashboard = () => {
 
                     {menuItems.map((item) => {
                         const isActive = location.pathname.includes(item.link);
-                        const bg = isActive ? "bg-blue-50 text-blue-600 border-r-4 border-blue-600" : "text-gray-600 hover:bg-gray-50";
+                        const bg = isActive ? "bg-blue-50 text-blue border-r-4 border-blue" : "text-gray-600 hover:bg-gray-50";
 
                         return (
                             <button
@@ -78,6 +80,10 @@ const Dashboard = () => {
                 <Routes>
                     <Route path='/*' element={<Profile />} />
                     <Route path='/profile/*' element={<Profile />} />
+                    <Route path='/structure/*' element={<StructureProjet />} />
+                    <Route path='/equipe/*' element={<Equipe />} />
+                    <Route path='/budjet/*' element={<BudgetManager />} />
+
                 </Routes>
 
             </div>

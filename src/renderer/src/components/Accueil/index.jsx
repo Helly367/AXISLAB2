@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import accueilImg from "../../../../../resources/acceuil.png";
-import CreationProjet from '../CreationProjet';
+import CreationProjet from '../widjets/CreationProjet';
 
 const Accueil = () => {
 

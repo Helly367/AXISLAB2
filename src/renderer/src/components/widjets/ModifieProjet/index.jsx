@@ -18,17 +18,31 @@ const publiqueClient = [
     "Demandeurs d'emploi",
     "Retraités",
     "Enfants",
-    "Adultes"
+    "Adultes",
+    "Hommes",
+    "Femmes",
+    "Sportifs",
+    "Entreprises",
+    "Écoles",
+    "Universités",
+    "Hopitaux",
+    "Fast food",
+    "Les super marché",
+
+
 ];
 
 const typeProjet = [
-    "Formation",
-    "Accompagnement",
-    "Coaching",
-    "Événementiel",
-    "Conseil",
-    "Développement",
-    "Recherche"
+    "Projet informatique",
+    "Projet industriel",
+    "Projet organisationnel",
+    "Projet éducatif",
+    "Projet événementiel",
+    "Projet humanitaire",
+    "Projet d’investissement",
+    "Projet d’innovation",
+    "Projet d’amélioration",
+    "Projet de recherche"
 ];
 
 const ModifierProjet = ({ isOpen, onClose, projectData }) => {
@@ -72,11 +86,11 @@ const ModifierProjet = ({ isOpen, onClose, projectData }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50">
             <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 {/* Modal Header */}
-                <div className="flex justify-between items-center p-4 bg-blue-600 sticky top-0">
-                    <h2 className="text-xl font-bold text-white">Modifier le projet</h2>
+                <div className="flex justify-between items-center p-3 bg-blue-600 sticky top-0">
+                    <h2 className="text-[16px] font-bold text-white">Modifier le projet</h2>
                     <button
                         onClick={onClose}
                         className="text-white hover:bg-blue-700 p-1 rounded-full transition-colors"

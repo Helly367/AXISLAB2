@@ -8,3 +8,25 @@
   --color-flou : rgba(0, 0, 0, 0.493) ;
 
 }
+
+/* Largeur de la scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+/* Fond de la barre */
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+/* Curseur (partie que l’on déplace) */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4e73df, #1cc88a);
+  border-radius: 10px;
+}
+
+/* Effet au survol */
+::-webkit-scrollbar-thumb:hover {
+  background: #2e59d9;
+}

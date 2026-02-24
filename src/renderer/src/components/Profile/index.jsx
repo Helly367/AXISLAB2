@@ -10,7 +10,7 @@ import {
     Category
 } from '@mui/icons-material'
 import React, { useState } from 'react'
-import ModifierProjet from '../ModifieProjet';
+import ModifierProjet from '../widjets/ModifieProjet';
 
 
 
@@ -37,11 +37,11 @@ const Profile = () => {
             <div className="max-w-8xl mx-auto flex flex-col items-center py-3">
 
                 {/* Header avec gradient */}
-                <div className='w-full bg-gradient-to-r from-blue-600 to-blue-800 shadow-sm rounded-sm p-4 flex justify-between items-center'>
+                <div className='w-full bg-gradient-to-r from-blue to-blue-800 shadow-sm rounded-sm p-4 flex justify-between items-center'>
                     <h1 className='text-xl text-white font-bold'>Profil du projet</h1>
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className='bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2 shadow-md'
+                        className='bg-white text-blue px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2 shadow-md'
                     >
                         <Edit /> Modifier les informations
                     </button>
@@ -56,7 +56,7 @@ const Profile = () => {
                         <div className='bg-blue-100 p-6 rounded-lg  shadow-sm'>
 
                             <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-blue-600 rounded-full'>
+                                <div className='p-2 bg-blue rounded-full'>
                                     <Person2Rounded className='text-white' />
                                 </div>
                                 <h3 className='text-xl font-bold text-gray-800'>Nom du projet</h3>

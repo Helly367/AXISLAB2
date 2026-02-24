@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axis from "../../../../../resources/axis.png";
+import axis from "../../../../../../resources/axis.png";
 import SearchIcon from '@mui/icons-material/Search';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import UploadIcon from '@mui/icons-material/Upload';
@@ -130,7 +130,7 @@ const OpenProject = () => {
                     </div>
                 ) : (
                     // Message si aucun projet trouvé
-                        <div className="text-center py-12 px-6">
+                    <div className="text-center py-12 px-6">
                         <p className="text-gray-500 text-lg">
                             Aucun projet trouvé
                         </p>

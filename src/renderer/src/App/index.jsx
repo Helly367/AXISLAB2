@@ -1,7 +1,7 @@
 import { Toaster } from 'react-hot-toast';
 import { Route, Routes, BrowserRouter } from 'react-router-dom';
 import Accueil from '../components/Accueil';
-import OpenProject from '../components/OpenProject';
+import OpenProject from '../components/widjets/OpenProject';
 import SplashScreen from '../SplashScreen';
 import { useState } from 'react';
 import Dashboard from '../components/Dashboard';
