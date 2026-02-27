@@ -1,0 +1,38 @@
+.titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    -webkit-app-region: drag;
+    box-shadow: 1px 5px 2px rgba(0, 0, 0, 0.048);
+}
+
+.drag-area {
+    -webkit-app-region: drag;
+    flex: 1;
+    padding-left: 10px;
+}
+
+.window-controls button {
+    -webkit-app-region: no-drag;
+    border: none;
+    cursor: pointer;
+    padding: 3px 5px;
+
+}
+
+.window-controls button:hover {
+    background-color: rgba(0, 0, 0, 0.096);
+}
+
+/* Ajuste le contenu principal pour qu'il ne soit pas caché derrière la titlebar */
+.w-screen.h-screen {
+    padding-top: 40px;
+    /* Même hauteur que la titlebar */
+    box-sizing: border-box;
+}

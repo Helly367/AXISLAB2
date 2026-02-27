@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-blue: #143172 ;
+  --color-primary: #143172;
   --color-opacity: rgba(0, 0, 0, 0.507);
   --color-gris-anthracite: #1f2937;
   --color-gris-sombre: rgba(94, 93, 93, 0.658);
@@ -29,4 +29,7 @@
 /* Effet au survol */
 ::-webkit-scrollbar-thumb:hover {
   background: #2e59d9;
+}
+.menu::-webkit-scrollbar {
+  width: 6px;
 }
