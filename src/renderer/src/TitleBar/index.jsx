@@ -7,7 +7,7 @@ const TitleBar = () => {
     return (
 
         <div className="titlebar bg-white ">
-            <img src={axis} className='w-12' />
+            <img src={axis} className='w-12 ml-3' />
             <div className="window-controls flex items-center gap-4 px-4 text-primary font-bold ">
 
                 <button onClick={() => window.api.minimize()}>

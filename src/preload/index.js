@@ -1,22 +1,27 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-
 const api = {
-  direBonjour: (name) => {
-    return ipcRenderer.invoke("direBonjour", name)
-  },
-  
+  // Window controls
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
-  close: () => ipcRenderer.send('window-close')
+  close: () => ipcRenderer.send('window-close'),
+  
+  // Projets - CRUD complet
+  createProject: (projectData) => ipcRenderer.invoke('create-project', projectData),
+  checkProjects: () => ipcRenderer.invoke('check-projects'),
+  getProjects: () => ipcRenderer.invoke('get-projects'),
+  getProjectById: (id) => ipcRenderer.invoke('get-project-by-id', id),
+  updateProject: (id, updateData) => ipcRenderer.invoke('update-project', id, updateData),
+  deleteProject: (id) => ipcRenderer.invoke('delete-project', id),
+  
+ 
 }
 
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-   
   } catch (error) {
     console.error('🔴 Erreur exposition:', error)
   }

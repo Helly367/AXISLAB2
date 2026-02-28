@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import accueilImg from "../../../../../resources/acceuil.png";
 import CreationProjet from '../widjets/CreationProjet';
 
-const Accueil = () => {
+const Accueil = ({ setProject }) => {
 
 
 
@@ -23,7 +23,7 @@ const Accueil = () => {
             </div>
 
             {/* Section droite - Formulaire */}
-            <CreationProjet />
+            <CreationProjet setProject={setProject} />
 
         </section>
     );
