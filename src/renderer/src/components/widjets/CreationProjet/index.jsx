@@ -4,7 +4,7 @@ import { joiResolver } from '@hookform/resolvers/joi'
 import Joi from 'joi'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'react-toastify';
-import { useProjects } from '../../../hooks/useProjets'
+import { alertService } from "../../../functions/alertService"
 
 // Schéma de validation Joi
 const projectSchema = Joi.object({
@@ -19,11 +19,9 @@ const projectSchema = Joi.object({
   })
 })
 
-const CreationProjet = () => {
+const CreationProjet = ({ handleCreate }) => {
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [serverError, setServerError] = useState('')
-  const { createProject } = useProjects();
 
   // Initialisation de React Hook Form
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm({
@@ -42,9 +40,8 @@ const CreationProjet = () => {
     setLoading(true)
     setServerError('')
 
-
-
     try {
+
       const projectData = {
         ...data,
         chef_projet: null,
@@ -62,39 +59,32 @@ const CreationProjet = () => {
       }
 
 
-      // Crée un délai minimum de 5 secondes
-      const minimumDelay = new Promise(resolve => setTimeout(resolve, 5000));
-      // Exécute la requête ET le délai en parallèle
-      const [result] = await Promise.all([createProject(projectData), minimumDelay]);
+      // simulation chargement
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      const result = await handleCreate(projectData)
 
+      if (result?.success) {
 
-      if (result.success) {
-        setSuccess(true)
-        reset() // Réinitialise le formulaire
+        alertService.success("Projet créé avec succès")
 
-        setTimeout(() => setSuccess(false), 5000)
-        toast.success("Message", {
-          position: "bottom-right",
-          theme: "dark",
-          autoClose: 5000,
-        });
+        reset()
 
       } else {
-        setServerError(result.error || 'Erreur lors de la création')
-        toast.error("Erreur lors de la création", {
-          position: "bottom-right",
-          theme: "dark",
-          autoClose: 5000,
-        });
+
+        setServerError(result?.error || "Erreur lors de la création")
+        alertService.error(result?.error || "Erreur lors de la création")
+
       }
+
     } catch (err) {
-      setServerError('Erreur: ' + err.message)
+
+      setServerError("Erreur: " + err.message)
+      alertService.error("Erreur serveur")
+
     } finally {
       setLoading(false)
-
     }
   }
-
   console.log(serverError);
 
   return (

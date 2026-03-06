@@ -1,0 +1,259 @@
+import React, { useState } from 'react';
+import { AddCircle, Timeline, Link, Flag } from "@mui/icons-material";
+import { Routes, Route, useNavigate, useParams, useLocation, Navigate } from 'react-router-dom';
+
+import PhaseList from './Phases/PhaseList';
+import PhaseItem from './Phases/PhaseItem';
+import ModalCreatePhase from './Phases/CreatePhase';
+import ModalEditPhase from './Phases/EditPhase';
+import EnterpriseGantt from './Gantt/GanttDiagram';
+import DependenciesManager from './DependenciesManager';
+import MilestonesList from './Milestones/MilestonesList';
+
+import { usePhases } from '../../../hooks/usePhase';
+
+const StructureContent = ({ project }) => {
+
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { projet_id} = useParams();
+
+    /* =============================
+       STATES
+    ============================= */
+
+    const { phases } = usePhases();
+
+    const [dependencies, setDependencies] = useState([]);
+    const [milestones, setMilestones] = useState([]);
+
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [phaseToEdit, setPhaseToEdit] = useState(null);
+
+    /* =============================
+       PHASE MANAGEMENT
+    ============================= */
+
+    const handleEditPhase = (updatedPhase) => {
+        console.log(updatedPhase);
+    };
+
+    const handleViewPhase = (phase_id) => {
+        navigate(`/dashboard/${projet_id}/structure/phase/${phase_id}`);
+    };
+
+    const handleBack = () => {
+        navigate(`/dashboard/${projet_id}/structure/phase`);
+    };
+
+    const handleOpenEditModal = (phase) => {
+        setPhaseToEdit(phase);
+        setIsEditModalOpen(true);
+    };
+
+    /* =============================
+       DEPENDENCY CHECKER
+    ============================= */
+
+    const checkDependencies = (phaseId) => {
+        const phaseDeps = dependencies.filter(d => d.to === phaseId);
+
+        for (const dep of phaseDeps) {
+            const depPhase = phases.find(p => p.id === dep.from);
+
+            if (!depPhase || depPhase.progression < 100) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    /* =============================
+       NAVIGATION
+    ============================= */
+
+    const navigation = [
+        {
+            label: "Liste des phases",
+            icon: <></>,
+            path: `/dashboard/${projet_id}/structure/phase`
+        },
+        {
+            label: "Diagramme de Gantt",
+            icon: <Timeline fontSize="small" />,
+            path: `/dashboard/${projet_id}/structure/gantt`
+        },
+        {
+            label: "Dépendances",
+            icon: <Link fontSize="small" />,
+            path: `/dashboard/${projet_id}/structure/dependances`
+        },
+        {
+            label: "Jalons",
+            icon: <Flag fontSize="small" />,
+            path: `/dashboard/${projet_id}/structure/jalons`
+        }
+    ];
+
+    return (
+        <div className="min-h-screen bg-gray-200">
+
+            <div className="max-w-8xl mx-auto px-4 py-2">
+
+                {/* HEADER */}
+
+                <div className="bg-primary rounded-lg shadow-md p-4 flex justify-between items-center mb-4">
+
+                    <h1 className="text-xl text-white font-bold">
+                        Structure du projet
+                    </h1>
+
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all flex items-center gap-2 shadow-md"
+                    >
+                        <AddCircle />
+                        Ajouter une phase
+                    </button>
+
+                </div>
+
+                {/* NAVIGATION */}
+
+                <div className="bg-white rounded-lg shadow-md p-2 mb-4 flex gap-2">
+
+                    {navigation.map((nav) => (
+
+                        <NavButton
+                            key={nav.label}
+                            active={location.pathname.includes(nav.path)}
+                            onClick={() => navigate(nav.path)}
+                            icon={nav.icon}
+                            label={nav.label}
+                        />
+
+                    ))}
+
+                </div>
+
+                {/* ROUTES */}
+
+                <Routes>
+
+                    {/* ROUTE PAR DEFAUT */}
+                    <Route
+                        index
+                        element={<Navigate to="phase" replace />}
+                    />
+
+                    <Route
+                        path="phase"
+                        element={
+                            <PhaseList
+                                phases={phases}
+                                onViewPhase={handleViewPhase}
+                                onEditPhase={handleOpenEditModal}
+                                dependencies={dependencies}
+                                checkDependencies={checkDependencies}
+                            />
+                        }
+                    />
+
+                    <Route
+                        path="phase/:phase_id"
+                        element={
+                            <PhaseItem
+                                phases={phases}
+                                onBack={handleBack}
+                                onEdit={handleOpenEditModal}
+                                milestones={milestones.filter(
+                                    m => m.phaseId === phase_id
+                                )}
+                               
+                            />
+                        }
+                    />
+
+                    <Route
+                        path="gantt"
+                        element={
+                            <EnterpriseGantt
+                                phases={phases}
+                                dependencies={dependencies}
+                                milestones={milestones}
+                                onPhaseClick={handleViewPhase}
+                            />
+                        }
+                    />
+
+                    <Route
+                        path="dependances"
+                        element={
+                            <DependenciesManager
+                                phases={phases}
+                                dependencies={dependencies}
+                                onUpdateDependencies={setDependencies}
+                            />
+                        }
+                    />
+
+                    <Route
+                        path="jalons"
+                        element={
+                            <MilestonesList
+                                phases={phases}
+                                milestones={milestones}
+                                onUpdateMilestones={setMilestones}
+                            />
+                        }
+                    />
+
+                </Routes>
+
+                {/* MODAL CREATE */}
+
+                <ModalCreatePhase
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    project={project}
+                />
+
+                {/* MODAL EDIT */}
+
+                <ModalEditPhase
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setPhaseToEdit(null);
+                    }}
+                    onSave={handleEditPhase}
+                    phaseToEdit={phaseToEdit}
+                />
+
+            </div>
+
+        </div>
+    );
+};
+
+const NavButton = ({ active, onClick, icon, label }) => {
+
+    return (
+        <button
+            onClick={onClick}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2
+            ${active
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+        >
+            {icon}
+            {label}
+        </button>
+    );
+
+};
+
+export default StructureContent;

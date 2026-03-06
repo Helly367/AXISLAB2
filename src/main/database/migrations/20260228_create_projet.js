@@ -2,7 +2,7 @@
 export const up = function(knex) {
   return knex.schema.createTable('projects', table => {
     // Informations de base
-    table.increments('id').primary();
+    table.increments('projet_id').primary();
     table.string('nom_projet').notNullable(); // Seul champ obligatoire
     table.string('chef_projet').nullable();
     table.text('description').nullable();

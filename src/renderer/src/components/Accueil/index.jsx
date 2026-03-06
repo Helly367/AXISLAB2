@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
 import accueilImg from "../../../../../resources/acceuil.png";
 import CreationProjet from '../widjets/CreationProjet';
+import { useProjects } from '../../hooks/useProjets';
+import { useNavigate } from 'react-router-dom';
 
 const Accueil = ({ setProject }) => {
+    const navigate = useNavigate();
+    const { createProject } = useProjects();
+
+
+    const handleCreate = async (data) => {
+        const result = await createProject(data);
+
+        if (result.success) {
+            navigate(`/dashboard/${result.data.id}`);
+        }
+
+        return result;
+    };
 
 
 
@@ -23,7 +38,7 @@ const Accueil = ({ setProject }) => {
             </div>
 
             {/* Section droite - Formulaire */}
-            <CreationProjet setProject={setProject} />
+            <CreationProjet handleCreate={handleCreate} />
 
         </section>
     );

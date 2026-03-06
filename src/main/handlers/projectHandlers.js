@@ -1,226 +1,224 @@
-import db from '../database/db.js';
-import Joi from 'joi';
+import db from '../database/db';
+import { projectSchema } from '../database/schemas/projetSchema';
 
-const projectSchema = Joi.object({
-  nom_projet: Joi.string().min(2).max(200).required().messages({
-    'string.empty': 'Le nom du projet est obligatoire',
-    'string.min': 'Le nom doit contenir au moins 2 caractères',
-    'any.required': 'Le nom du projet est requis'
-  }),
-  
-  chef_projet: Joi.alternatives().try(
-    Joi.string().min(2).max(100),
-    Joi.valid(null)
-  ).optional().messages({
-    'string.min': 'Le nom du chef doit contenir au moins 2 caractères'
-  }),
-  
-  description: Joi.alternatives().try(
-    Joi.string().max(1000),
-    Joi.valid(null)
-  ).optional(),
-  
-  date_debut: Joi.alternatives().try(
-    Joi.date().iso(),
-    Joi.valid(null)
-  ).optional(),
-  
-  date_fin: Joi.alternatives().try(
-    Joi.date().iso().min(Joi.ref('date_debut')),
-    Joi.valid(null)
-  ).optional().messages({
-    'date.min': 'La date de fin doit être postérieure à la date de début'
-  }),
-  
-  objectif_long_terme: Joi.alternatives().try(
-    Joi.string().max(500),
-    Joi.valid(null)
-  ).optional(),
-  
-  objectif_long_terme_debut: Joi.alternatives().try(
-    Joi.date().iso(),
-    Joi.valid(null)
-  ).optional(),
-  
-  objectif_long_terme_fin: Joi.alternatives().try(
-    Joi.date().iso().min(Joi.ref('objectif_long_terme_debut')),
-    Joi.valid(null)
-  ).optional(),
-  
-  objectif_court_terme: Joi.alternatives().try(
-    Joi.string().max(500),
-    Joi.valid(null)
-  ).optional(),
-  
-  objectif_court_terme_debut: Joi.alternatives().try(
-    Joi.date().iso(),
-    Joi.valid(null)
-  ).optional(),
-  
-  objectif_court_terme_fin: Joi.alternatives().try(
-    Joi.date().iso().min(Joi.ref('objectif_court_terme_debut')),
-    Joi.valid(null)
-  ).optional(),
-  
-  prospects_cibles: Joi.alternatives().try(
-    Joi.array().items(Joi.string().min(2).max(50)),
-    Joi.valid(null)
-  ).optional().messages({
-    'array.base': 'Les prospects doivent être une liste',
-    'string.min': 'Un nom de communauté doit contenir au moins 2 caractères'
-  }),
-  
-  type_projet: Joi.alternatives().try(
-    Joi.string().valid('interne', 'externe', 'recherche', 'developpement'),
-    Joi.valid(null)
-  ).optional(),
-  
-  status: Joi.alternatives().try(
-    Joi.string().valid('planification', 'en_cours', 'suspendu', 'termine', 'abandonne'),
-    Joi.valid(null)
-  ).optional()
-});
 
-// Fonction de validation
+
+/* ===============================
+   VALIDATION CENTRALISÉE
+================================ */
+
 function validateProject(data) {
-  const { error, value } = projectSchema.validate(data, { 
-    abortEarly: false,
-    allowUnknown: true 
+  const { error, value } = projectSchema.validate(data, {
+    abortEarly: false
   });
-  
+
   if (error) {
-    const errors = error.details.map(d => ({
-      field: d.path.join('.'),
-      message: d.message
-    }));
-    throw new Error(JSON.stringify(errors));
+    return {
+      isValid: false,
+      errors: error.details.map(err => ({
+        field: err.path[0],
+        message: err.message
+      }))
+    };
   }
-  
-  return value;
+
+  return {
+    isValid: true,
+    value
+  };
 }
 
-// Vérifier si des projets existent
-export async function checkProjects() {
+/* ===============================
+   UPDATE PROJECT
+================================ */
+
+export async function updateProject(projet_id, updateData) {
   try {
-    const result = await db('projects').count('* as count').first();
-    const count = result?.count || 0;
-    
-    if (count > 0) {
-      const lastProject = await db('projects')
-        .select('*')
-        .orderBy('created_at', 'desc')
-        .first();
-      
-      return { 
-        exists: true, 
-        count,
-        lastProject 
-      };
-    } else {
-      return { exists: false, count: 0 };
+
+    if (!projet_id || isNaN(projet_id)) {
+      return { success: false, errors: [{ field: "id", message: "ID invalide" }] };
     }
-  } catch (error) {
-    console.error('Erreur checkProjects:', error);
-    return { exists: false, count: 0, error: error.message };
-  }
-}
 
-// Récupérer tous les projets
-export async function getAllProjects() {
-  try {
-    const projects = await db('projects')
-      .select('*')
-      .orderBy('created_at', 'desc');
-    
-    return { 
-      success: true, 
-      data: projects 
-    };
-  } catch (error) {
-    console.error('Erreur getAllProjects:', error);
-    return { 
-      success: false, 
-      error: error.message 
-    };
-  }
-}
+    const {
+      projet_id: _ignoredId,
+      created_at: _ignoredCreatedAt,
+      updated_at: _ignoredUpdatedAt,
+      ...cleanData
+    } = updateData;
 
-// Récupérer un projet par ID
-export async function getProjectById(id) {
-  try {
-    const project = await db('projects')
-      .where({ id })
+    // 🔹 Normalisation prospects
+    if (cleanData.hasOwnProperty("prospects_cibles")) {
+      const value = cleanData.prospects_cibles;
+
+      if (!value) {
+        cleanData.prospects_cibles = null;
+
+      } else if (Array.isArray(value)) {
+        cleanData.prospects_cibles = value.filter(v => v?.trim() !== "");
+
+      } else if (typeof value === "string") {
+        cleanData.prospects_cibles = value
+          .split(",")
+          .map(v => v.trim())
+          .filter(v => v !== "");
+
+      } else {
+        cleanData.prospects_cibles = null;
+      }
+    }
+
+    // 🔹 Validation
+    const validation = validateProject(cleanData);
+
+    if (!validation.isValid) {
+      return { success: false, errors: validation.errors };
+    }
+
+    const validatedData = validation.value;
+
+    // 🔹 JSON stringify pour SQLite
+    if (Array.isArray(validatedData.prospects_cibles)) {
+      validatedData.prospects_cibles = JSON.stringify(validatedData.prospects_cibles);
+    }
+
+    await db("projects")
+      .where({ projet_id })
+      .update({
+        ...validatedData,
+        updated_at: new Date()
+      });
+
+    const updatedProject = await db("projects")
+      .where({ projet_id })
       .first();
-    
-    if (!project) {
-      return { 
-        success: false, 
-        error: 'Projet non trouvé' 
-      };
+
+    if (updatedProject?.prospects_cibles) {
+      try {
+        updatedProject.prospects_cibles = JSON.parse(updatedProject.prospects_cibles);
+      } catch {
+        updatedProject.prospects_cibles = [];
+      }
     }
-    
-    return { 
-      success: true, 
-      data: project 
-    };
+
+    return { success: true, data: updatedProject };
+
   } catch (error) {
-    console.error('Erreur getProjectById:', error);
-    return { 
-      success: false, 
-      error: error.message 
+  console.error("Erreur updateProject:", error);
+
+  if (error?.type === "validation") {
+    return {
+      success: false,
+      errors: error.errors
     };
   }
+
+  return {
+    success: false,
+    errors: [
+      {
+        field: "general",
+        message: "Une erreur est survenue lors de la mise à jour"
+      }
+    ]
+  };
+}
 }
 
-// Créer un projet
+/* ===============================
+   CREATE PROJECT
+================================ */
+
 export async function createProject(projectData) {
   try {
-    const validatedData = validateProject(projectData);
-    
-    const [id] = await db('projects').insert({
+
+    const validation = validateProject(projectData);
+
+    if (!validation.isValid) {
+      return { success: false, error: validation.errors };
+    }
+
+    const validatedData = validation.value;
+
+    if (Array.isArray(validatedData.prospects_cibles)) {
+      validatedData.prospects_cibles = JSON.stringify(validatedData.prospects_cibles);
+    }
+
+    const [projet_id] = await db('projects').insert({
       ...validatedData,
       created_at: new Date(),
       updated_at: new Date()
     });
-    
-    const newProject = await db('projects').where({ id }).first();
-    
-    return { success: true, id, data: newProject };
+
+    const newProject = await db('projects').where({ projet_id }).first();
+
+    if (newProject?.prospects_cibles) {
+      try {
+        newProject.prospects_cibles = JSON.parse(newProject.prospects_cibles);
+      } catch {
+        newProject.prospects_cibles = [];
+      }
+    }
+
+    return { success: true, projet_id, data: newProject };
+
   } catch (error) {
     console.error('Erreur création projet:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Mettre à jour un projet
-export async function updateProject(id, updateData) {
+/* ===============================
+   GET ALL PROJECTS
+================================ */
+
+export async function getAllProjects() {
   try {
-    const validatedData = validateProject(updateData);
-    
-    await db('projects')
-      .where({ id })
-      .update({
-        ...validatedData,
-        updated_at: new Date()
-      });
-    
-    const updatedProject = await db('projects').where({ id }).first();
-    
-    return { success: true, data: updatedProject };
+    const projects = await db('projects')
+      .select('*')
+      .orderBy('created_at', 'desc');
+
+    return { success: true, data: projects };
+
   } catch (error) {
-    console.error('Erreur updateProject:', error);
+    console.error('Erreur getAllProjects:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Supprimer un projet
-export async function deleteProject(id) {
+/* ===============================
+   GET PROJECT BY ID
+================================ */
+
+export async function getProjectById(projet_id) {
+  try {
+    const project = await db('projects')
+      .where({ projet_id })
+      .first();
+
+    if (!project) {
+      return { success: false, error: 'Projet non trouvé' };
+    }
+
+    return { success: true, data: project };
+
+  } catch (error) {
+    console.error('Erreur getProjectById:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/* ===============================
+   DELETE PROJECT
+================================ */
+
+export async function deleteProject(projet_id) {
   try {
     await db('projects')
-      .where({ id })
+      .where({ projet_id })
       .delete();
-    
+
     return { success: true };
+
   } catch (error) {
     console.error('Erreur deleteProject:', error);
     return { success: false, error: error.message };

@@ -1,67 +1,54 @@
-import { Toaster } from 'react-hot-toast';
-import { Route, Routes, BrowserRouter } from 'react-router-dom';
-import Accueil from '../components/Accueil';
-import OpenProject from '../components/widjets/OpenProject';
-import SplashScreen from '../SplashScreen';
-import { useState, useEffect } from 'react';
-import Dashboard from '../components/Dashboard';
-import TitleBar from '../TitleBar';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { ProjectsProvider, useProjects } from '../hooks/useProjets';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useProjects } from "../hooks/useProjets";
+import { ProjectsProvider } from "../hooks/useProjets";
+import { PhaseProvider } from "../hooks/usePhase";
+import Accueil from "../components/Accueil";
+import Dashboard from "../components/Dashboard/Dashboard";
+import OpenProject from "../components/widjets/OpenProject";
+import TitleBar from "../TitleBar";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Composant interne qui utilise le contexte
-const AppContent = () => {
-  const [project, setProject] = useState(null);
-  const [projectsExist, setProjectsExist] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const { projects, loading: projectsLoading } = useProjects();
 
-  useEffect(() => {
-    if (!projectsLoading) {
-      setProjectsExist(projects.length > 0);
-      setIsLoading(false);
-    }
-  }, [projects, projectsLoading]);
+const RootRedirect = ({ projects }) => {
 
-  if (isLoading) {
-    return (
-      <div className="w-screen h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    );
+  if (projects.length === 0) {
+    return <Accueil />;
   }
 
-  return (
-    <div className="w-screen h-screen bg-white overflow-hidden">
-      <ToastContainer />
-      <TitleBar />
-      <BrowserRouter>
-        <SplashScreen>
-          {projectsExist && !project ? (
-            <OpenProject setProject={setProject} />
-          ) : project ? (
-            <Dashboard project={project} />
-          ) : (
-            <Accueil setProject={setProject} />
-          )}
-          <Toaster position="top-right" />
-        </SplashScreen>
-      </BrowserRouter>
-    </div>
-  );
+  return <Navigate to="/projects" replace />;
 };
 
-// Composant principal avec le Provider
-function App() {
+
+
+function AppContent() {
+  const { projects, loading } = useProjects();
+
+  if (loading) return <div>Loading...</div>;
+
   return (
-    <ProjectsProvider>
-      <AppContent />
-    </ProjectsProvider>
+    <div className="w-screen h-screen bg-white overflow-hidden ">
+      <Routes>
+        <Route path="/" element={<RootRedirect projects={projects} />} />
+        <Route path="/projects" element={<OpenProject />} />
+        <Route path="/dashboard/:projet_id/*" element={<Dashboard />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ProjectsProvider>
+      <PhaseProvider>
+        <TitleBar />
+        <ToastContainer />
+      <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </PhaseProvider>
+    </ProjectsProvider>
+  );
+}

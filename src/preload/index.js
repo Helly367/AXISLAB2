@@ -15,6 +15,12 @@ const api = {
   updateProject: (id, updateData) => ipcRenderer.invoke('update-project', id, updateData),
   deleteProject: (id) => ipcRenderer.invoke('delete-project', id),
   
+
+  // Phases - CRUD complet
+  createPhase: (phaseData) => ipcRenderer.invoke('create-phase', phaseData),
+  updatePhase: (id , phaseData) => ipcRenderer.invoke('phase-update', id, phaseData),
+  getPhases: () => ipcRenderer.invoke('get-phases'),
+  
  
 }
 
