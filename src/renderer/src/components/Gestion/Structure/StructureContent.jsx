@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { AddCircle, Timeline, Link, Flag } from "@mui/icons-material";
 import { Routes, Route, useNavigate, useParams, useLocation, Navigate } from 'react-router-dom';
-
 import PhaseList from './Phases/PhaseList';
 import PhaseItem from './Phases/PhaseItem';
 import ModalCreatePhase from './Phases/CreatePhase';
 import ModalEditPhase from './Phases/EditPhase';
 import EnterpriseGantt from './Gantt/GanttDiagram';
 import DependenciesManager from './DependenciesManager';
-import MilestonesList from './Milestones/MilestonesList';
+import JalonContnent from './Jalons/JalonContent';
 
 import { usePhases } from '../../../hooks/usePhase';
 
@@ -25,8 +24,7 @@ const StructureContent = ({ project }) => {
     const { phases } = usePhases();
 
     const [dependencies, setDependencies] = useState([]);
-    const [milestones, setMilestones] = useState([]);
-
+    const [jalons, setJalons] = useState([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [phaseToEdit, setPhaseToEdit] = useState(null);
@@ -168,8 +166,8 @@ const StructureContent = ({ project }) => {
                                 phases={phases}
                                 onBack={handleBack}
                                 onEdit={handleOpenEditModal}
-                                milestones={milestones.filter(
-                                    m => m.phaseId === phase_id
+                                jalons={jalons.filter(
+                                    m => m.Number(phaseId) === Number(phase_id)
                                 )}
                                
                             />
@@ -180,32 +178,22 @@ const StructureContent = ({ project }) => {
                         path="gantt"
                         element={
                             <EnterpriseGantt
-                                phases={phases}
                                 dependencies={dependencies}
-                                milestones={milestones}
+                                jalons={jalons}
                                 onPhaseClick={handleViewPhase}
                             />
                         }
                     />
 
-                    <Route
-                        path="dependances"
-                        element={
-                            <DependenciesManager
-                                phases={phases}
-                                dependencies={dependencies}
-                                onUpdateDependencies={setDependencies}
-                            />
-                        }
-                    />
+                    <Route path="dependances" element={<DependenciesManager project={project} />} />
 
                     <Route
                         path="jalons"
                         element={
-                            <MilestonesList
+                            <JalonContnent
                                 phases={phases}
-                                milestones={milestones}
-                                onUpdateMilestones={setMilestones}
+                                project={project}
+
                             />
                         }
                     />

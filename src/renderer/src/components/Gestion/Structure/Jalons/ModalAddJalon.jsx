@@ -1,8 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Close, Save, Flag, Description, CalendarToday, Category } from "@mui/icons-material";
+import { useJalon } from '../../../../hooks/useJalon';
+import { motion } from 'framer-motion';
 
-const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
+const AddJalon = ({ isOpen, onClose, phases, project }) => {
+    const { ajouteJalon } = useJalon();
+    const [loading, setLoading] = useState(false);
 
     const {
         register,
@@ -14,7 +18,8 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
             title: '',
             description: '',
             date: '',
-            phaseId: '',
+            phase_id: '',
+            projet_id: '',
             type: 'validation'
         }
     });
@@ -26,20 +31,43 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                 title: '',
                 description: '',
                 date: '',
-                phaseId: '',
+                phase_id: '',
+                projet_id: '',
                 type: 'validation'
             });
         }
     }, [isOpen, reset]);
 
-    const onSubmit = (data) => {
+    const formatDate = (date) => {
+        if (!date) return '';
+        return new Date(date).toISOString().split('T')[0];
+    };
+
+    const onSubmit = async (data) => {
+        setLoading(true);
+
         const formattedData = {
             ...data,
-            phaseId: Number(data.phaseId)
+            date: formatDate(data.date),
+            phase_id: Number(data.phase_id),
+            projet_id: Number(project.projet_id)
         };
 
-        onSave(formattedData);
-        onClose();
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const result = await ajouteJalon(formattedData);
+
+
+        if (!result.success) {
+            console.error(result.error || result.errors);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(false);
+        handleClose();
+
+
     };
 
     const handleClose = () => {
@@ -47,10 +75,12 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
         onClose();
     };
 
+
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
 
                 <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex justify-between items-center">
@@ -70,7 +100,9 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                         <input
                             type="text"
                             {...register('title', { required: 'Le titre est requis' })}
-                            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.title ? 'border-red-500' : 'border-gray-300'
+                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.title ? 'border-red-500' : 'border-gray-300'
                                 }`}
                             placeholder="Ex: Validation du cahier des charges"
                         />
@@ -87,7 +119,9 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                         <textarea
                             {...register('description', { required: 'La description est requise' })}
                             rows="3"
-                            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.description ? 'border-red-500' : 'border-gray-300'
+                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.description ? 'border-red-500' : 'border-gray-300'
                                 }`}
                             placeholder="Description du jalon..."
                         />
@@ -105,7 +139,9 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                             <input
                                 type="date"
                                 {...register('date', { required: 'La date est requise' })}
-                                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.date ? 'border-red-500' : 'border-gray-300'
+                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                    focus:outline-none focus:bg-white focus:border-blue-500
+                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.date ? 'border-red-500' : 'border-gray-300'
                                     }`}
                             />
                             {errors.date && (
@@ -119,18 +155,20 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                                 Phase
                             </label>
                             <select
-                                {...register('phaseId', { required: 'La phase est requise' })}
-                                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.phaseId ? 'border-red-500' : 'border-gray-300'
+                                {...register('phase_id', { required: 'La phase est requise' })}
+                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                    focus:outline-none focus:bg-white focus:border-blue-500
+                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.phaseId ? 'border-red-500' : 'border-gray-300'
                                     }`}>
                                 <option value="">Sélectionnez</option>
                                 {phases.map(phase => (
-                                    <option key={phase.id} value={phase.id}>
+                                    <option key={phase.phase_id} value={phase.phase_id}>
                                         {phase.title}
                                     </option>
                                 ))}
                             </select>
                             {errors.phaseId && (
-                                <p className="text-red-500 text-sm mt-1">{errors.phaseId.message}</p>
+                                <p className="text-red-500 text-sm mt-1">{errors.phase_id.message}</p>
                             )}
                         </div>
                     </div>
@@ -141,7 +179,9 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                         </label>
                         <select
                             {...register('type')}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
                             <option value="validation">Validation</option>
                             <option value="revue">Revue</option>
                             <option value="livrable">Livrable</option>
@@ -155,11 +195,32 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
                             className="px-6 py-2 border rounded-lg hover:bg-gray-50">
                             Annuler
                         </button>
-                        <button
+
+
+                        <motion.button
                             type="submit"
-                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
-                            <Save /> Ajouter
-                        </button>
+                            disabled={loading || Object.keys(errors).length > 0}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                        >
+
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Ajoute en cours...
+                                </>
+                            ) : (
+                                <>
+                                    <Save /> Ajouter
+
+                                </>
+                            )}
+
+                        </motion.button>
                     </div>
 
                 </form>
@@ -168,4 +229,4 @@ const ModalAddMilestone = ({ isOpen, onClose, onSave, phases = [] }) => {
     );
 };
 
-export default ModalAddMilestone;
+export default AddJalon;

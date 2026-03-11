@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useProjects } from "../hooks/useProjets";
 import { ProjectsProvider } from "../hooks/useProjets";
 import { PhaseProvider } from "../hooks/usePhase";
+import { JalonProvider } from "../hooks/useJalon";
 import Accueil from "../components/Accueil";
 import Dashboard from "../components/Dashboard/Dashboard";
 import OpenProject from "../components/widjets/OpenProject";
@@ -43,11 +44,13 @@ export default function App() {
   return (
     <ProjectsProvider>
       <PhaseProvider>
+        <JalonProvider>
         <TitleBar />
         <ToastContainer />
-      <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </JalonProvider>
       </PhaseProvider>
     </ProjectsProvider>
   );

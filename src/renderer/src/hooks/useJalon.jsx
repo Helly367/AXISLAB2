@@ -9,35 +9,35 @@ import React, {
 import { alertService } from '../functions/alertService';
 
 
-const PhasesContext = createContext();
+const JalonContext = createContext();
 
-export const PhaseProvider = ({ children }) => {
+export const JalonProvider = ({ children }) => {
 
-    const [phases, setPhases] = useState([]);
+    const [jalons, setJalons] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
 
     /* =========================
-      LOAD PHASES
+      LOAD JALONS
    ========================== */
-    const loadPhases = useCallback(async () => {
+    const loadJalons = useCallback(async () => {
         try {
             setLoading(true);
 
-            const result = await window.api.getPhases();
+            const result = await window.api.getJalons();
 
             if (result.success) {
-                setPhases(result.data || []);
+                setJalons(result.data || []);
                 setError(null);
             } else {
                 throw new Error(result.error);
             }
 
         } catch (err) {
-            console.error("Erreur chargement des phases:", err);
-            setError("Impossible de charger les phases");
-            alertService.error("Impossible de charger les phases")
+            console.error("Erreur chargement des jalons:", err);
+            setError("Impossible de charger les jalons");
+            alertService.error("Impossible de charger les jalons")
         } finally {
             setLoading(false);
         }
@@ -47,21 +47,24 @@ export const PhaseProvider = ({ children }) => {
        INITIAL LOAD
     ========================== */
     useEffect(() => {
-        loadPhases();
-    }, [loadPhases]);
+        loadJalons();
+    }, [loadJalons]);
 
 
     /* =========================
        CREATE PHASE
     ========================== */
-    const createPhase = useCallback(async (phaseData) => {
+    const ajouteJalon = useCallback(async (jalonData) => {
         try {
 
-            if (!window.api?.createPhase) {
+            if (!window.api?.createJalon) {
                 throw new Error("API Electron non disponible");
             }
 
-            const result = await window.api.createPhase(phaseData);
+            const result = await window.api.createJalon(jalonData);
+
+            console.log(result);
+
 
 
             if (!result) {
@@ -73,8 +76,8 @@ export const PhaseProvider = ({ children }) => {
             }
 
             // Optimisation : on ajoute sans reload complet
-            setPhases(prev => [...prev, result.data]);
-            alertService.success(`La Phase ${result.data.title} a été créer avec succès !`)
+            setJalons(prev => [...prev, result.data]);
+            alertService.success(`Le Jalon ${result.data.title} a été créer avec succès !`)
 
             return { success: true, data: result.data };
 
@@ -86,16 +89,16 @@ export const PhaseProvider = ({ children }) => {
     }, []);
 
 
-    /* =========================
-      UPDATE PHASE
-   ========================== */
-    const updatePhase = useCallback(async (phase_id, phaseData) => {
-        console.log("phase id", phase_id);
-        console.log("phaseData ", phaseData);
+    //     /* =========================
+    //       UPDATE PHASE
+    //    ========================== */
+    const modifieJalon = useCallback(async (jalon_id, jalonData) => {
+        console.log("phase id", jalon_id);
+        console.log("jalonData ", jalonData);
 
 
         try {
-            const result = await window.api.updatePhase(phase_id, phaseData);
+            const result = await window.api.updateJalon(jalon_id, jalonData);
             console.log(result);
 
             if (!result) {
@@ -106,10 +109,10 @@ export const PhaseProvider = ({ children }) => {
                 throw new Error(result.error || "Erreur inconnue");
             }
 
-            setPhases(prev =>
-                prev.map(p => p.phase_id === phase_id ? { ...p, ...phaseData } : p)
+            setJalons(prev =>
+                prev.map(p => p.jalon_id === jalon_id ? { ...p, ...jalonData } : p)
             );
-            alertService.success(`La Phase ${result.data.title} a été modifié avec succès !`)
+            alertService.success(`Le jalon ${result.data.title} a été modifié avec succès !`)
             return { success: true };
 
         } catch (err) {
@@ -119,26 +122,26 @@ export const PhaseProvider = ({ children }) => {
         }
     });
 
-    /* =========================
-    DELETE PHASE
- ========================== */
-    const deletePhase = useCallback(async (phase_id, phase) => {
+    //     /* =========================
+    //     DELETE PHASE
+    //  ========================== */
+    const deleteJalon = useCallback(async (jalon_id, jalon) => {
         try {
 
-            const result = await window.api.deletePhase(phase_id);
+            const result = await window.api.deletejalon(jalon_id);
 
             if (!result?.success) {
                 throw new Error(result?.error || "Erreur inconnue");
             }
 
-            setPhases(prev =>
+            setJalons(prev =>
                 prev.filter(p =>
-                    Number(p.phase_id) !== Number(result.data.phase_id)
+                    Number(p.jalon_id) !== Number(result.data.jalon_id)
                 )
             );
 
             alertService.success(
-                `La Phase ${phase?.title || ""} a été supprimée avec succès !`
+                `Le jalon ${jalon?.title || ""} a été supprimée avec succès !`
             );
 
             return result;
@@ -156,33 +159,36 @@ export const PhaseProvider = ({ children }) => {
        MEMOIZED CONTEXT VALUE
     ========================== */
     const value = useMemo(() => ({
-        phases,
+        jalons,
         loading,
         error,
-        createPhase,
-        updatePhase,
-        deletePhase
+        ajouteJalon,
+        modifieJalon,
+        deleteJalon
+
 
     }), [
-        phases,
+        jalons,
         loading,
         error,
-        createPhase,
-        updatePhase,
-        deletePhase
+        ajouteJalon,
+        modifieJalon,
+        deleteJalon
+
+
     ]);
 
     return (
-        <PhasesContext.Provider value={value}>
+        <JalonContext.Provider value={value}>
             {children}
-        </PhasesContext.Provider>
+        </JalonContext.Provider>
     );
 };
 
-export const usePhases = () => {
-    const context = useContext(PhasesContext);
+export const useJalon = () => {
+    const context = useContext(JalonContext);
     if (!context) {
-        throw new Error("usePhase doit être utilisé dans un PhaseProvider");
+        throw new Error("useJalons doit être utilisé dans un JalonProvider");
     }
     return context;
 };

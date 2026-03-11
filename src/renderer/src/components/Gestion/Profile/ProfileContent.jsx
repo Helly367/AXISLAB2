@@ -147,6 +147,17 @@ const ProfileContent = ({ project }) => {
     };
 
 
+    const formateDate2 = (dateString) => {
+        if (!dateString) return 'Non définie';
+        return new Date(dateString).toLocaleDateString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        })
+    }
+
+
 
 
     return (
@@ -257,7 +268,7 @@ const ProfileContent = ({ project }) => {
                                 <h3 className='font-semibold text-gray-700'>Date de début</h3>
                             </div>
                             <p className='text-lg font-medium text-gray-800'>
-                                {project.date_debut ? formatDate(project.date_debut) : " non defini"}
+                                {project.date_debut ? formateDate2(project.date_debut) : " non defini"}
                             </p>
                         </div>
 
@@ -267,7 +278,7 @@ const ProfileContent = ({ project }) => {
                                 <h3 className='font-semibold text-gray-700'>Date de fin prévue</h3>
                             </div>
                             <p className='text-lg font-medium text-gray-800'>
-                                {project.date_fin ? formatDate(project.date_fin) : " non defini"}
+                                {project.date_fin ? formateDate2(project.date_fin) : " non defini"}
                             </p>
                         </div>
 
@@ -293,14 +304,14 @@ const ProfileContent = ({ project }) => {
                                     <CalendarToday className='text-blue-500' />
                                     <span className='font-semibold'>Début :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_court_terme_debut ? formatDate(project.objectif_court_terme_debut) : " non defini"}
+                                        {project.objectif_court_terme_debut ? formateDate2(project.objectif_court_terme_debut) : " non defini"}
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-red-500' />
                                     <span className='font-semibold'>Fin :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_court_terme_fin ? formatDate(project.objectif_court_terme_fin) : " non defini"}
+                                        {project.objectif_court_terme_fin ? formateDate2(project.objectif_court_terme_fin) : " non defini"}
                                     </span>
                                 </div>
                             </div>
@@ -322,14 +333,14 @@ const ProfileContent = ({ project }) => {
                                     <CalendarToday className='text-blue-500' />
                                     <span className='font-semibold'>Début :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_long_terme_debut ? formatDate(project.objectif_long_terme_debut) : " non defini"}
+                                        {project.objectif_long_terme_debut ? formateDate2(project.objectif_long_terme_debut) : " non defini"}
                                     </span>
                                 </div>
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-red-500' />
                                     <span className='font-semibold'>Fin :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_long_terme_fin ? formatDate(project.objectif_long_terme_fin) : " non defini"}
+                                        {project.objectif_long_terme_fin ? formateDate2(project.objectif_long_terme_fin) : " non defini"}
                                     </span>
                                 </div>
                             </div>

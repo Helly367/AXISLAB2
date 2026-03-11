@@ -1,16 +1,43 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from "react";
 import { Link, ArrowForward, Delete, Add, Warning } from "@mui/icons-material";
+import { usePhases } from "../../../hooks/usePhase";
+import { DependencyApi } from "../../../functions/dependency";
 
-const DependenciesManager = ({ phases = [], dependencies = [], onUpdateDependencies }) => {
-    const [newDependency, setNewDependency] = useState({ from: '', to: '' });
-    const [error, setError] = useState('');
+const DependenciesManager = ({ project }) => {
 
-    // Tri stable mémorisé
+    const { phases } = usePhases();
+
+
+    const [newDependency, setNewDependency] = useState({ from: "", to: "" });
+    const [dependencies, setDependencies] = useState([]);
+    const [error, setError] = useState("");
+
+
     const sortedPhases = useMemo(() => {
         return [...phases].sort(
             (a, b) => new Date(a.date_debut) - new Date(b.date_debut)
         );
     }, [phases]);
+
+    // Charger dépendances
+    useEffect(() => {
+
+        if (!project.projet_id) return;
+
+        DependencyApi.getDependenciesByProject(project.projet_id).then((res) => {
+
+            if (!res?.success) return;
+
+            const deps = res.data.map((d) => ({
+                dependency_id: d.dependency_id,
+                from: d.from_phase_id,
+                to: d.to_phase_id
+            }));
+
+            setDependencies(deps);
+        });
+
+    }, [project.projet_id]);
 
     const parseIds = () => ({
         from: Number(newDependency.from),
@@ -18,206 +45,267 @@ const DependenciesManager = ({ phases = [], dependencies = [], onUpdateDependenc
     });
 
     const dependencyExists = (from, to) => {
-        return dependencies.some(d => d.from === from && d.to === to);
+        return dependencies.some((d) => d.from === from && d.to === to);
     };
 
+    // Construction du graphe
     const buildGraph = (extraEdge = null) => {
+
         const graph = {};
 
-        dependencies.forEach(d => {
+        dependencies.forEach((d) => {
+
             if (!graph[d.from]) graph[d.from] = [];
+
             graph[d.from].push(d.to);
         });
 
         if (extraEdge) {
+
             const { from, to } = extraEdge;
+
             if (!graph[from]) graph[from] = [];
+
             graph[from].push(to);
         }
 
         return graph;
     };
 
+    // Détection cycle
     const hasCycle = (graph) => {
+
         const visited = new Set();
         const stack = new Set();
 
         const dfs = (node) => {
+
             if (stack.has(node)) return true;
+
             if (visited.has(node)) return false;
 
             visited.add(node);
             stack.add(node);
 
             for (const neighbor of graph[node] || []) {
+
                 if (dfs(neighbor)) return true;
             }
 
             stack.delete(node);
+
             return false;
         };
 
-        return Object.keys(graph).some(node => dfs(Number(node)));
+        return Object.keys(graph).some((node) => dfs(Number(node)));
     };
 
-    const handleAddDependency = () => {
-        setError('');
+    const handleAddDependency = async () => {
+
+        setError("");
 
         if (!newDependency.from || !newDependency.to) {
-            return setError('Veuillez sélectionner deux phases');
+            return setError("Veuillez sélectionner deux phases");
         }
 
         const { from, to } = parseIds();
 
         if (from === to) {
-            return setError('Une phase ne peut pas dépendre d\'elle-même');
+            return setError("Une phase ne peut pas dépendre d'elle-même");
         }
 
         if (dependencyExists(from, to)) {
-            return setError('Cette dépendance existe déjà');
+            return setError("Cette dépendance existe déjà");
         }
 
         const graph = buildGraph({ from, to });
 
         if (hasCycle(graph)) {
-            return setError('Cette dépendance créerait un cycle');
+            return setError("Cette dépendance créerait un cycle");
         }
 
-        onUpdateDependencies([...dependencies, { from, to }]);
-        setNewDependency({ from: '', to: '' });
+        const response = await DependencyApi.createDependency({
+            projet_id: project.projet_id,
+            from_phase_id: from,
+            to_phase_id: to
+        });
+
+        if (!response?.success) return;
+
+        setDependencies((prev) => [
+            ...prev,
+            {
+                dependency_id: response.data.dependency_id,
+                from,
+                to
+            }
+        ]);
+
+        setNewDependency({ from: "", to: "" });
     };
 
-    const handleDeleteDependency = (from, to) => {
-        onUpdateDependencies(
-            dependencies.filter(d => !(d.from === from && d.to === to))
+    const handleDeleteDependency = async (dependency_id) => {
+
+        await DependencyApi.deleteDependency(dependency_id);
+
+        setDependencies((prev) =>
+            prev.filter((d) => d.dependency_id !== dependency_id)
         );
     };
 
     const getPhaseName = (id) => {
-        const phase = phases.find(p => p.id === id);
-        return phase ? phase.title : 'Inconnue';
+
+        const phase = phases.find((p) => p.phase_id === id);
+
+        return phase ? phase.title : "Inconnue";
     };
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
+
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                 <Link className="text-blue-600" />
                 Gestion des dépendances entre phases
             </h2>
 
             <div className="bg-gray-50 rounded-lg p-6 mb-8">
-                <h3 className="font-medium text-gray-700 mb-4">Ajouter une dépendance</h3>
+
+                <h3 className="font-medium text-gray-700 mb-4">
+                    Ajouter une dépendance
+                </h3>
 
                 <div className="flex flex-col md:flex-row items-end gap-4">
+
                     <div className="flex-1">
+
                         <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Phase dépendante (doit attendre)
+                            Phase antérieure
                         </label>
+
                         <select
-                            value={newDependency.to}
+                            value={newDependency.from}
                             onChange={(e) =>
-                                setNewDependency(prev => ({ ...prev, to: e.target.value }))
+                                setNewDependency((prev) => ({
+                                    ...prev,
+                                    from: e.target.value
+                                }))
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 border rounded-lg"
                         >
-                            <option value="">Sélectionnez une phase</option>
-                            {sortedPhases.map(phase => (
-                                <option key={phase.id} value={phase.id}>
-                                    {phase.title} ({new Date(phase.date_debut).toLocaleDateString('fr-FR')})
+                            <option value="">Sélectionner</option>
+
+                            {sortedPhases.map((phase) => (
+
+                                <option
+                                    key={phase.phase_id}
+                                    value={phase.phase_id}
+                                >
+                                    {phase.title}
                                 </option>
+
                             ))}
                         </select>
                     </div>
 
-                    <div className="flex items-center justify-center p-2">
-                        <ArrowForward className="text-gray-400" />
-                    </div>
+                    <ArrowForward />
 
                     <div className="flex-1">
+
                         <label className="block text-sm font-medium text-gray-600 mb-1">
-                            Phase antérieure (doit être terminée)
+                            Phase dépendante
                         </label>
+
                         <select
-                            value={newDependency.from}
+                            value={newDependency.to}
                             onChange={(e) =>
-                                setNewDependency(prev => ({ ...prev, from: e.target.value }))
+                                setNewDependency((prev) => ({
+                                    ...prev,
+                                    to: e.target.value
+                                }))
                             }
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            className="w-full p-3 border rounded-lg"
                         >
-                            <option value="">Sélectionnez une phase</option>
-                            {sortedPhases.map(phase => (
-                                <option key={phase.id} value={phase.id}>
-                                    {phase.title} ({new Date(phase.date_debut).toLocaleDateString('fr-FR')})
+                            <option value="">Sélectionner</option>
+
+                            {sortedPhases.map((phase) => (
+
+                                <option
+                                    key={phase.phase_id}
+                                    value={phase.phase_id}
+                                >
+                                    {phase.title}
                                 </option>
+
                             ))}
                         </select>
                     </div>
 
                     <button
                         onClick={handleAddDependency}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
                     >
                         <Add /> Ajouter
                     </button>
+
                 </div>
 
                 {error && (
-                    <div className="mt-3 text-red-500 text-sm flex items-center gap-1">
+                    <div className="mt-3 text-red-500 flex items-center gap-1">
                         <Warning fontSize="small" />
                         {error}
                     </div>
                 )}
             </div>
 
-            <h3 className="font-medium text-gray-700 mb-4">Dépendances existantes</h3>
+            <h3 className="font-medium text-gray-700 mb-4">
+                Dépendances existantes
+            </h3>
 
             {dependencies.length > 0 ? (
+
                 <div className="space-y-3">
-                    {dependencies.map((dep, index) => (
+
+                    {dependencies.map((dep) => (
+
                         <div
-                            key={`${dep.from}-${dep.to}-${index}`}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-shadow"
+                            key={dep.dependency_id}
+                            className="flex justify-between items-center p-4 bg-gray-50 rounded-lg"
                         >
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-medium text-blue-600">
-                                        {getPhaseName(dep.from)}
-                                    </span>
-                                    <ArrowForward className="text-gray-400" />
-                                    <span className="font-medium text-green-600">
-                                        {getPhaseName(dep.to)}
-                                    </span>
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                    {getPhaseName(dep.from)} doit être terminée avant de commencer {getPhaseName(dep.to)}
+
+                            <div className="flex items-center gap-3">
+
+                                <span className="text-blue-600 font-medium">
+                                    {getPhaseName(dep.from)}
                                 </span>
+
+                                <ArrowForward />
+
+                                <span className="text-green-600 font-medium">
+                                    {getPhaseName(dep.to)}
+                                </span>
+
                             </div>
 
                             <button
-                                onClick={() => handleDeleteDependency(dep.from, dep.to)}
-                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                onClick={() =>
+                                    handleDeleteDependency(dep.dependency_id)
+                                }
+                                className="text-red-500"
                             >
                                 <Delete />
                             </button>
+
                         </div>
                     ))}
                 </div>
-            ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <Link className="text-gray-400 text-5xl mb-3" />
-                    <p className="text-gray-500">Aucune dépendance définie</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                        Les dépendances permettent de gérer l'ordre d'exécution des phases
-                    </p>
-                </div>
-            )}
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-blue-800 mb-2">Comment ça marche ?</h4>
-                <p className="text-sm text-blue-600">
-                    Une dépendance signifie qu'une phase ne peut commencer que lorsque la phase antérieure est terminée à 100%.
-                </p>
-            </div>
+            ) : (
+
+                    <p className="text-gray-500">
+                        Aucune dépendance définie
+                    </p>
+
+            )}
         </div>
     );
 };

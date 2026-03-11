@@ -4,9 +4,12 @@ import StructureContent from "../Gestion/Structure/StructureContent";
 import EquipeContnent from "../Ressources/Equipe/EquipeContent";
 import BudgetContent from "../Ressources/Budget/BudgetContent";
 import MaterielContent from "../Ressources/Materiels/MaterielContent";
+import ProjectDashboardChart from "../Gestion/Progress";
+import { usePhases } from "../../hooks/usePhase";
 
 
 const DashboardContent = ({ project }) => {
+    const { phases } = usePhases();
     return (
         <main className=" bg-gray-50 mb-8">
             <Routes>
@@ -15,6 +18,7 @@ const DashboardContent = ({ project }) => {
                 <Route index element={<Navigate to="profile" replace />} />
 
                 <Route path="profile/*" element={<ProfileContent project={project} />} />
+                <Route path="progress/*" element={<ProjectDashboardChart project={project} phases={phases} />} />
                 <Route path="structure/*" element={<StructureContent project={project} />} />
                 <Route path="equipe/*" element={<EquipeContnent project={project} />} />
                 <Route path="Budget/*" element={<BudgetContent project={project} />} />

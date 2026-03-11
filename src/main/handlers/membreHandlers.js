@@ -1,154 +1,227 @@
 import db from "../database/db.js";
-import { memberSchema } from "../database/schemas/membreSchema.js";
+import { membreSchema, normalizeMembreData } from "../database/schemas/membreSchema.js";
 
-/* ---------- Validation ---------- */
+function formatMembre(membre) {
+  if (!membre) return null;
 
-function validateMember(data) {
-    const { error, value } = memberSchema.validate(data, {
-        abortEarly: false
+  return {
+    membre_id: membre.membre_id,
+    nom: membre.nom,
+    poste: membre.poste,
+    role: membre.role,
+    email: membre.email,
+    photo: membre.photo,
+    disponibilite: membre.disponibilite,
+    chargeMax: membre.chargeMax,
+    chargeActuelle: membre.chargeActuelle,
+    competences: JSON.parse(membre.competences || "[]"),
+    competencesRequises: JSON.parse(membre.competencesRequises || "[]"),
+    dateDebut: membre.dateDebut,
+    historique: JSON.parse(membre.historique || "[]"),
+    created_at: membre.created_at,
+    updated_at: membre.updated_at
+  };
+}
+
+export async function createMembre(data) {
+
+  try {
+
+    const cleaned = normalizeMembreData(data);
+
+    const { error, value } = membreSchema.validate(cleaned, {
+      abortEarly: false
     });
 
     if (error) {
-        return {
-            isValid: false,
-            errors: error.details.map(e => ({
-                field: e.path[0],
-                message: e.message
-            }))
-        };
+      return {
+        success: false,
+        errors: error.details.map(e => ({
+          field: e.path[0],
+          message: e.message
+        }))
+      };
     }
 
-    return { isValid: true, value };
+    const [membre_id] = await db("membres").insert({
+
+      ...value,
+
+      competences: JSON.stringify(value.competences),
+      competences_requises: JSON.stringify(value.competences_requises),
+      historique: JSON.stringify(value.historique),
+
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    const membre = await db("membres")
+      .where({ membre_id })
+      .first();
+
+    return {
+      success: true,
+      data: formatMembre(membre)
+    };
+
+  } catch (error) {
+
+    console.error("Erreur createMembre:", error);
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
-/* ---------- CREATE ---------- */
 
-export async function createMember(data) {
+export async function getAllMembres() {
 
-    try {
+  try {
 
-        const validation = validateMember(data);
+    const membres = await db("membres")
+      .select("*")
+      .orderBy("created_at", "desc");
 
-        if (!validation.isValid)
-            return { success: false, errors: validation.errors };
+    return {
+      success: true,
+      data: membres.map(formatMembre)
+    };
 
-        const cleanData = validation.value;
+  } catch (error) {
 
-        const [id] = await db("members").insert({
-            ...cleanData,
-            competences: JSON.stringify(cleanData.competences),
-            competencesRequises: JSON.stringify(cleanData.competencesRequises),
-            historique: JSON.stringify(cleanData.historique),
-            created_at: new Date(),
-            updated_at: new Date()
-        });
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
-        return { success: true, id };
 
-    } catch (err) {
-        console.error("createMember error", err);
+export async function getMembreById(id) {
 
-        return {
-            success: false,
-            error: "Erreur création membre"
-        };
+  try {
+
+    const membre = await db("membres")
+      .where({ membre_id: id })
+      .first();
+
+    if (!membre) {
+
+      return {
+        success: false,
+        error: "Membre non trouvé"
+      };
     }
+
+    return {
+      success: true,
+      data: formatMembre(membre)
+    };
+
+  } catch (error) {
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
-/* ---------- UPDATE ---------- */
 
-export async function updateMember(id, data) {
+export async function updateMembre(membreId, updateData) {
 
-    try {
+  try {
 
-        const validation = validateMember(data);
+    const cleaned = normalizeMembreData(updateData);
 
-        if (!validation.isValid)
-            return { success: false, errors: validation.errors };
+    const { error, value } = membreSchema.validate(cleaned, {
+      abortEarly: false,
+      stripUnknown: true
+    });
 
-        const cleanData = validation.value;
+    if (error) {
 
-        await db("members")
-            .where({ id })
-            .update({
-                ...cleanData,
-                competences: JSON.stringify(cleanData.competences),
-                competencesRequises: JSON.stringify(cleanData.competencesRequises),
-                historique: JSON.stringify(cleanData.historique),
-                updated_at: new Date()
-            });
-
-        return { success: true };
-
-    } catch (err) {
-        console.error(err);
-
-        return { success: false, error: "Erreur update membre" };
+      return {
+        success: false,
+        errors: error.details.map(e => ({
+          field: e.path[0],
+          message: e.message
+        }))
+      };
     }
+
+    await db("membres")
+      .where({ membre_id: membreId })
+      .update({
+
+        ...value,
+
+        competences: JSON.stringify(value.competences),
+        competences_requises: JSON.stringify(value.competences_requises),
+        historique: JSON.stringify(value.historique),
+
+        updated_at: new Date()
+      });
+
+    const membre = await db("membres")
+      .where({ membre_id: membreId })
+      .first();
+
+    return {
+      success: true,
+      data: formatMembre(membre)
+    };
+
+  } catch (error) {
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
-/* ---------- GET ALL ---------- */
 
-export async function getAllMembers() {
+export async function deleteMembre(membreId) {
 
-    try {
+  try {
 
-        const rows = await db("members").orderBy("created_at", "desc");
+    await db("membres")
+      .where({ membre_id: membreId })
+      .del();
 
-        return {
-            success: true,
-            data: rows.map(m => ({
-                ...m,
-                competences: JSON.parse(m.competences || "[]"),
-                competencesRequises: JSON.parse(m.competencesRequises || "[]"),
-                historique: JSON.parse(m.historique || "[]")
-            }))
-        };
+    return {
+      success: true,
+      data: { membre_id: membreId }
+    };
 
-    } catch (err) {
-        return { success: false, error: err.message };
-    }
+  } catch (error) {
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
-/* ---------- DELETE ---------- */
 
-export async function deleteMember(id) {
+import { ipcMain } from "electron";
+import {
+  createMembre,
+  getAllMembres,
+  getMembreById,
+  updateMembre,
+  deleteMembre
+} from "../handlers/membreHandler.js";
 
-    try {
+ipcMain.handle("membre:create", (_, data) => createMembre(data));
 
-        await db("members").where({ id }).delete();
+ipcMain.handle("membre:getAll", () => getAllMembres());
 
-        return { success: true };
+ipcMain.handle("membre:getById", (_, id) => getMembreById(id));
 
-    } catch (err) {
-        return { success: false, error: err.message };
-    }
-}
+ipcMain.handle("membre:update", (_, id, data) => updateMembre(id, data));
 
-/* ---------- GET BY ID ---------- */
-
-export async function getMemberById(id) {
-
-    try {
-
-        const member = await db("members")
-            .where({ id })
-            .first();
-
-        if (!member)
-            return { success: false, error: "Membre non trouvé" };
-
-        return {
-            success: true,
-            data: {
-                ...member,
-                competences: JSON.parse(member.competences || "[]"),
-                competencesRequises: JSON.parse(member.competencesRequises || "[]"),
-                historique: JSON.parse(member.historique || "[]")
-            }
-        };
-
-    } catch (err) {
-        return { success: false, error: err.message };
-    }
-}
+ipcMain.handle("membre:delete", (_, id) => deleteMembre(id));

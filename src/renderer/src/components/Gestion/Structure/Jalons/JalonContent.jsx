@@ -1,47 +1,35 @@
 import React, { useState, useMemo } from 'react';
 import { Flag, Add, Edit, Delete, CalendarToday } from "@mui/icons-material";
-import ModalAddMilestone from './ModalAddMilestone';
-import ModalEditMilestone from './ModalEditMilestone';
+import AddJalon from './ModalAddJalon';
+import EditJalon from './ModalEditJalon';
+import { useJalon } from '../../../../hooks/useJalon';
+import DeleteConfirm from '../../../widjets/DeleteConfirm';
 
-const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) => {
+const JalonContnent = ({ phases, project }) => {
+    const { jalons, deleteJalon } = useJalon();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [milestoneToEdit, setMilestoneToEdit] = useState(null);
+    const [jalonToEdite, setJalonToEdite] = useState(null);
     const [filterPhase, setFilterPhase] = useState('all');
+    const [openDelete, setOpenDelete] = useState(false);
+    const [titre, setTitle] = useState('');
 
     // Map phases pour accès rapide O(1)
     const phaseMap = useMemo(() => {
         const map = {};
         phases.forEach(p => {
-            map[p.id] = p;
+            map[p.phase_id] = p;
         });
         return map;
     }, [phases]);
 
-    const handleAddMilestone = (newMilestone) => {
-        const id = Date.now();
-        onUpdateMilestones([...milestones, { ...newMilestone, id }]);
+
+    const getPhaseName = (phase_id) => {
+        return phaseMap[phase_id]?.title || 'Inconnue';
     };
 
-    const handleEditMilestone = (updatedMilestone) => {
-        onUpdateMilestones(
-            milestones.map(m =>
-                m.id === updatedMilestone.id ? updatedMilestone : m
-            )
-        );
-    };
-
-    const handleDeleteMilestone = (id) => {
-        if (!window.confirm('Supprimer ce jalon ?')) return;
-        onUpdateMilestones(milestones.filter(m => m.id !== id));
-    };
-
-    const getPhaseName = (phaseId) => {
-        return phaseMap[phaseId]?.title || 'Inconnue';
-    };
-
-    const getPhaseColor = (phaseId) => {
-        return phaseMap[phaseId]?.couleur || '#6B7280';
+    const getPhaseColor = (phase_id) => {
+        return phaseMap[phase_id]?.couleur || '#6B7280';
     };
 
     const getTypeIcon = (type) => {
@@ -62,28 +50,29 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
         return labels[type] || type;
     };
 
-    const filteredMilestones = useMemo(() => {
-        if (filterPhase === 'all') return milestones;
-        return milestones.filter(
+    const filteredJalons = useMemo(() => {
+        if (filterPhase === 'all') return jalons;
+        return jalons.filter(
             m => m.phaseId === Number(filterPhase)
         );
-    }, [milestones, filterPhase]);
+    }, [jalons, filterPhase]);
 
     const sortedMilestones = useMemo(() => {
-        return [...filteredMilestones].sort(
+        return [...filteredJalons].sort(
             (a, b) => new Date(a.date) - new Date(b.date)
         );
-    }, [filteredMilestones]);
+    }, [filteredJalons]);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
 
     return (
         <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                     <Flag className="text-blue-600" />
-                    Jalons du projet ({milestones.length})
+                    Jalons du projet ({jalons.length})
                 </h2>
                 <button
                     onClick={() => setIsAddModalOpen(true)}
@@ -99,7 +88,7 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
                     className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     <option value="all">Toutes les phases</option>
                     {phases.map(phase => (
-                        <option key={phase.id} value={phase.id}>
+                        <option key={phase.phase_id} value={phase.phase_id}>
                             {phase.title}
                         </option>
                     ))}
@@ -111,53 +100,58 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
                     <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
 
                     <div className="space-y-6">
-                        {sortedMilestones.map((milestone) => {
-                            const phaseColor = getPhaseColor(milestone.phaseId);
-                            const date = new Date(milestone.date);
+                        {sortedMilestones.map((jalon) => {
+                            const phaseColor = getPhaseColor(jalon.phase_id);
+                            const date = new Date(jalon.date);
                             date.setHours(0, 0, 0, 0);
 
                             const isPast = date < today;
                             const isToday = date.getTime() === today.getTime();
 
                             return (
-                                <div key={milestone.id} className="relative flex items-start gap-6">
+                                <div key={jalon.jalon_id} className="relative flex items-start gap-6">
                                     <div
                                         className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl z-10 ${isPast ? 'bg-gray-200'
                                             : isToday ? 'bg-green-100'
                                                 : 'bg-blue-100'
                                             }`}
                                         style={{ border: `3px solid ${phaseColor}` }}>
-                                        {getTypeIcon(milestone.type)}
+                                        {getTypeIcon(jalon.type)}
                                     </div>
 
                                     <div className="flex-1 bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
                                                 <h3 className="text-lg font-bold text-gray-800">
-                                                    {milestone.title}
+                                                    {jalon.title}
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
-                                                    Phase: {getPhaseName(milestone.phaseId)}
+                                                <p className="text-sm text-primary font-bold">
+                                                    Phase :  {getPhaseName(jalon.phase_id)}
                                                 </p>
                                             </div>
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => {
-                                                        setMilestoneToEdit(milestone);
+                                                        setJalonToEdite(jalon);
                                                         setIsEditModalOpen(true);
                                                     }}
                                                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                                                     <Edit fontSize="small" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDeleteMilestone(milestone.id)}
+                                                    onClick={() => {
+                                                        setJalonToEdite(jalon);
+                                                        setTitle(jalon.title);
+                                                        setOpenDelete(true);
+
+                                                    }}
                                                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
                                                     <Delete fontSize="small" />
                                                 </button>
                                             </div>
                                         </div>
 
-                                        <p className="text-gray-700 mb-3">{milestone.description}</p>
+                                        <p className="text-gray-700 mb-3">{jalon.description}</p>
 
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2">
@@ -166,7 +160,7 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
                                                     : isToday ? 'text-green-600'
                                                         : 'text-blue-600'
                                                     }`}>
-                                                    {new Date(milestone.date).toLocaleDateString('fr-FR', {
+                                                    {new Date(jalon.date).toLocaleDateString('fr-FR', {
                                                         weekday: 'long',
                                                         year: 'numeric',
                                                         month: 'long',
@@ -176,7 +170,7 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
                                             </div>
 
                                             <span className="px-3 py-1 bg-gray-200 rounded-full text-xs font-medium">
-                                                {getTypeLabel(milestone.type)}
+                                                {getTypeLabel(jalon.type)}
                                             </span>
 
                                             {isPast && (
@@ -207,25 +201,33 @@ const MilestonesList = ({ phases = [], milestones = [], onUpdateMilestones }) =>
                 </div>
             )}
 
-            <ModalAddMilestone
+            <AddJalon
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                onSave={handleAddMilestone}
                 phases={phases}
+                project={project}
             />
 
-            <ModalEditMilestone
+            <EditJalon
                 isOpen={isEditModalOpen}
                 onClose={() => {
                     setIsEditModalOpen(false);
-                    setMilestoneToEdit(null);
+                    setJalonToEdite(null);
                 }}
-                onSave={handleEditMilestone}
-                milestoneToEdit={milestoneToEdit}
+                jalonToEdite={jalonToEdite}
                 phases={phases}
             />
+
+            <DeleteConfirm
+                title={`Voulez-vous vraiment supprimer le jalon ${titre}`}
+                open={openDelete}
+                onClose={() => setOpenDelete(false)}
+                onConfirm={() => {
+                    deleteJalon(jalonToEdite.jalon_id, jalonToEdite);
+                    setOpenDelete(false);
+                }} />
         </div>
     );
 };
 
-export default MilestonesList;
+export default JalonContnent;

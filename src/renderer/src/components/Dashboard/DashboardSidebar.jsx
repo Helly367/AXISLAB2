@@ -13,7 +13,8 @@ import {
     Notifications,
     Settings,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    TrendingUp
 } from "@mui/icons-material";
 
 const DashboardSidebar = ({
@@ -32,13 +33,14 @@ const DashboardSidebar = ({
     ====================== */
     const menuItems = useMemo(() => [
         { name: "Profile", icon: <Person2Rounded />, path: `/dashboard/${projet_id}/profile` },
+        { name: "Progress", icon: <TrendingUp />, path: `/dashboard/${projet_id}/progress` },
         { name: "Structure", icon: <Schema />, path: `/dashboard/${projet_id}/structure` },
-        { name: "Équipe", icon: <Groups />, path: "/equipe", badge: membersCount },
-        { name: "Budget", icon: <AttachMoney />, path: "/budget" },
-        { name: "Matériels", icon: <Inventory />, path: "/materiels", badge: materielsCount },
-        { name: "Campagnes", icon: <Campaign />, path: "/campagnes", badge: campagnesEnCours },
-        { name: "Risques", icon: <Warning />, path: "/risques" },
-        { name: "Tâches", icon: <Assignment />, path: "/taches", badge: tasksEnCours },
+        { name: "Équipe", icon: <Groups />, path: `/dashboard/${projet_id}/equipe`, badge: membersCount },
+        { name: "Budget", icon: <AttachMoney />, path: `/dashboard/${projet_id}/budget` },
+        { name: "Matériels", icon: <Inventory />, path: `/dashboard/${projet_id}/materiels`, badge: materielsCount },
+        { name: "Campagnes", icon: <Campaign />, path: `/dashboard/${projet_id}/campagnes`, badge: campagnesEnCours },
+        { name: "Risques", icon: <Warning />, path: `/dashboard/${projet_id}/risques` },
+        { name: "Tâches", icon: <Assignment />, path: `/dashboard/${projet_id}/taches`, badge: tasksEnCours },
         { name: "Mes projets", icon: <Folder />, path: "/mesprojets" },
         { name: "Notifications", icon: <Notifications />, path: "/notifications", badge: notificationsCount },
         { name: "Paramètres", icon: <Settings />, path: "/parametres" }
@@ -48,26 +50,27 @@ const DashboardSidebar = ({
        LINK STYLE
     ====================== */
 
-    const NavButton = ({ active, onClick, collapsed, item }) => (
-        <button
-            onClick={onClick}
-            className={`flex items-center gap-3  px-3 py-2 rounded-lg transition-all duration-200 relative w-full
-            ${active ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+    const NavButton = ({ collapsed, item }) => (
+        <NavLink
+            to={item.path}
+            className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 relative w-full
+            ${isActive ? "bg-primary text-white" : "text-gray-600 hover:bg-gray-100"}`
+            }
         >
 
-            <span className={`text-xl transition-all duration-200 ${collapsed ? "mx-auto" : ""
-                }`}>
+            <span className={`text-xl ${collapsed ? "mx-auto" : ""}`}>
                 {item.icon}
             </span>
 
             {!collapsed && (
                 <>
-                    <span className="font-medium text-sm transition-opacity duration-200">
+                    <span className="font-medium text-sm">
                         {item.name}
                     </span>
 
                     {item.badge > 0 && (
-                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full transition-opacity duration-200">
+                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
                             {item.badge}
                         </span>
                     )}
@@ -75,18 +78,15 @@ const DashboardSidebar = ({
             )}
 
             {collapsed && item.badge > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full transition-all duration-200">
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">
                     {item.badge}
                 </span>
             )}
 
-        </button>
+        </NavLink>
     );
 
-    const handleClick = (path) => {
-        navigate(path);
 
-    }
 
     return (
         <div
@@ -120,10 +120,9 @@ const DashboardSidebar = ({
 
                         <NavButton
                             key={item.name}
-                            onClick={() => handleClick(item.path)}
-                            active={location.pathname.endsWith(item.path)}
                             collapsed={collapsed}
-                            item={item} />
+                            item={item}
+                        />
 
 
                     ))}

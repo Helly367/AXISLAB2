@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Close,
     Warning,
@@ -7,17 +7,22 @@ import {
     Block,
     Add,
     Delete,
-    Edit,
-    Save,
     Person,
     CalendarToday,
     Comment
 } from "@mui/icons-material";
 
 const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
-    const [actions, setActions] = useState(risk?.actions || []);
+    const [actions, setActions] = useState([]);
     const [newAction, setNewAction] = useState('');
     const [comment, setComment] = useState('');
+
+    // Synchroniser actions si le risque change
+    useEffect(() => {
+        if (risk) {
+            setActions(risk.actions || []);
+        }
+    }, [risk]);
 
     if (!isOpen || !risk) return null;
 
@@ -30,17 +35,18 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
     };
 
     const handleAddAction = () => {
-        if (newAction.trim()) {
-            const newActionObj = {
-                id: Date.now(),
-                description: newAction,
-                completed: false
-            };
-            const updatedActions = [...actions, newActionObj];
-            setActions(updatedActions);
-            onUpdate({ ...risk, actions: updatedActions });
-            setNewAction('');
-        }
+        if (!newAction.trim()) return;
+
+        const newActionObj = {
+            id: Date.now(),
+            description: newAction.trim(),
+            completed: false
+        };
+
+        const updatedActions = [...actions, newActionObj];
+        setActions(updatedActions);
+        onUpdate({ ...risk, actions: updatedActions });
+        setNewAction('');
     };
 
     const handleDeleteAction = (actionId) => {
@@ -50,13 +56,14 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
     };
 
     const handleAddComment = () => {
-        if (comment.trim()) {
-            const updatedComments = risk.commentaires
-                ? `${risk.commentaires}\n[${new Date().toLocaleDateString('fr-FR')}] ${comment}`
-                : `[${new Date().toLocaleDateString('fr-FR')}] ${comment}`;
-            onUpdate({ ...risk, commentaires: updatedComments });
-            setComment('');
-        }
+        if (!comment.trim()) return;
+
+        const updatedComments = risk.commentaires
+            ? `${risk.commentaires}\n[${new Date().toLocaleDateString('fr-FR')}] ${comment.trim()}`
+            : `[${new Date().toLocaleDateString('fr-FR')}] ${comment.trim()}`;
+
+        onUpdate({ ...risk, commentaires: updatedComments });
+        setComment('');
     };
 
     const levelColor = {
@@ -74,13 +81,12 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-red-600 to-red-800 p-4 flex justify-between items-center sticky top-0">
+                <div className="bg-gradient-to-r from-red-600 to-red-800 p-4 flex justify-between items-center sticky top-0 z-10">
                     <h2 className="text-xl text-white font-bold flex items-center gap-2">
-                        <Warning />
-                        Détails du risque
+                        <Warning /> Détails du risque
                     </h2>
                     <button onClick={onClose} className="text-white hover:bg-red-700 p-1 rounded-full">
                         <Close />
@@ -96,7 +102,7 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                         </div>
                         <div className="flex gap-2">
                             <span className={`px-3 py-1 rounded-full text-white text-sm font-medium ${levelColor[risk.niveau]}`}>
-                                {risk.niveau.toUpperCase()}
+                                {risk.niveau?.toUpperCase()}
                             </span>
                             <span className="px-3 py-1 bg-gray-100 rounded-full text-sm font-medium flex items-center gap-1">
                                 {statusIcon[risk.statut]}
@@ -112,10 +118,7 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                             <div className="flex items-center gap-4">
                                 <div className="flex-1">
                                     <div className="w-full bg-gray-200 rounded-full h-3">
-                                        <div
-                                            className="bg-blue-500 rounded-full h-3"
-                                            style={{ width: `${risk.probabilite * 100}%` }}
-                                        />
+                                        <div className="bg-blue-500 rounded-full h-3" style={{ width: `${risk.probabilite * 100}%` }} />
                                     </div>
                                 </div>
                                 <span className="text-lg font-bold">{(risk.probabilite * 100).toFixed(0)}%</span>
@@ -127,10 +130,7 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                             <div className="flex items-center gap-4">
                                 <div className="flex-1">
                                     <div className="w-full bg-gray-200 rounded-full h-3">
-                                        <div
-                                            className="bg-orange-500 rounded-full h-3"
-                                            style={{ width: `${risk.impact * 100}%` }}
-                                        />
+                                        <div className="bg-orange-500 rounded-full h-3" style={{ width: `${risk.impact * 100}%` }} />
                                     </div>
                                 </div>
                                 <span className="text-lg font-bold">{(risk.impact * 100).toFixed(0)}%</span>
@@ -142,16 +142,14 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                     <div className="grid grid-cols-2 gap-6 mb-6">
                         <div className="bg-blue-50 rounded-lg p-4">
                             <h4 className="font-medium text-blue-700 mb-2 flex items-center gap-2">
-                                <Assignment fontSize="small" />
-                                Plan de mitigation
+                                <Assignment fontSize="small" /> Plan de mitigation
                             </h4>
                             <p className="text-sm text-blue-600">{risk.plan_mitigation}</p>
                         </div>
 
                         <div className="bg-purple-50 rounded-lg p-4">
                             <h4 className="font-medium text-purple-700 mb-2 flex items-center gap-2">
-                                <Assignment fontSize="small" />
-                                Plan de contingence
+                                <Assignment fontSize="small" /> Plan de contingence
                             </h4>
                             <p className="text-sm text-purple-600">{risk.plan_contingence}</p>
                         </div>
@@ -187,8 +185,7 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                     {/* Actions de mitigation */}
                     <div className="mb-6">
                         <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
-                            <Assignment className="text-blue-600" />
-                            Actions de mitigation
+                            <Assignment className="text-blue-600" /> Actions de mitigation
                         </h4>
 
                         <div className="space-y-2 mb-4">
@@ -197,31 +194,27 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                                     <div className="flex items-center gap-3 flex-1">
                                         <button
                                             onClick={() => handleToggleAction(action.id)}
-                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${action.completed ? 'bg-green-500 border-green-500' : 'border-gray-400'
-                                                }`}>
+                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${action.completed ? 'bg-green-500 border-green-500' : 'border-gray-400'}`}>
                                             {action.completed && <span className="text-white text-xs">✓</span>}
                                         </button>
                                         <span className={action.completed ? 'line-through text-gray-400' : 'text-gray-700'}>
                                             {action.description}
                                         </span>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteAction(action.id)}
-                                        className="text-red-500 hover:text-red-700">
+                                    <button onClick={() => handleDeleteAction(action.id)} className="text-red-500 hover:text-red-700">
                                         <Delete fontSize="small" />
                                     </button>
                                 </div>
                             ))}
                         </div>
 
-                        {/* Ajout d'action */}
                         <div className="flex gap-2">
                             <input
                                 type="text"
                                 value={newAction}
                                 onChange={(e) => setNewAction(e.target.value)}
                                 placeholder="Nouvelle action de mitigation..."
-                                className="flex-1 p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md "
+                                className="flex-1 p-2 border-2 border-gray-400 rounded-md focus:outline-blue-600"
                             />
                             <button
                                 onClick={handleAddAction}
@@ -234,8 +227,7 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                     {/* Commentaires */}
                     <div className="border-t pt-4">
                         <h4 className="font-medium text-gray-700 mb-4 flex items-center gap-2">
-                            <Comment className="text-blue-600" />
-                            Commentaires
+                            <Comment className="text-blue-600" /> Commentaires
                         </h4>
 
                         {risk.commentaires && (
@@ -249,8 +241,8 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                                 value={comment}
                                 onChange={(e) => setComment(e.target.value)}
                                 placeholder="Ajouter un commentaire..."
-                                className="flex-1 p-2               bg-transparent  placeholder-gray-600"
-                                rows="2"
+                                className="flex-1 p-2 border-2 border-gray-400 rounded-md"
+                                rows={2}
                             />
                             <button
                                 onClick={handleAddComment}
@@ -260,11 +252,8 @@ const RiskDetails = ({ isOpen, onClose, risk, onUpdate }) => {
                         </div>
                     </div>
 
-                    {/* Bouton fermer */}
                     <div className="flex justify-end mt-6 pt-4 border-t">
-                        <button
-                            onClick={onClose}
-                            className="px-6 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <button onClick={onClose} className="px-6 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
                             Fermer
                         </button>
                     </div>

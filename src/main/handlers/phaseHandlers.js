@@ -15,6 +15,7 @@ function formatPhase(phase) {
 export async function createPhase(data) {
 
   try {
+    
 
     const cleaned = normalizePhaseData(data);
 
@@ -60,14 +61,26 @@ export async function createPhase(data) {
   }
 }
 
-export async function updatePhase(id, data) {
-
+export async function updatePhase(phaseId, updatePhaseData) {
   try {
 
-    const cleaned = normalizePhaseDataUpdate(data);
+    if (!phaseId || isNaN(phaseId)) {
+      return {
+        success: false,
+        errors: [{ field: "id", message: "ID invalide" }]
+      };
+    }
 
-    const { error, value } = phaseSchema.validate(cleaned, {
-      abortEarly: false
+    const {
+      phase_id,
+      created_at,
+      updated_at,
+      ...cleanData
+    } = updatePhaseData;
+
+    const { error, value } = phaseSchema.validate(cleanData, {
+      abortEarly: false,
+      stripUnknown: true
     });
 
     if (error) {
@@ -81,7 +94,7 @@ export async function updatePhase(id, data) {
     }
 
     await db("phases")
-      .where({ phase_id: id })
+      .where({ phase_id: phaseId })
       .update({
         ...value,
         taches: JSON.stringify(value.taches),
@@ -90,7 +103,7 @@ export async function updatePhase(id, data) {
       });
 
     const phase = await db("phases")
-      .where({ phase_id: id })
+      .where({ phase_id: phaseId })
       .first();
 
     return {
@@ -160,16 +173,18 @@ export async function getPhaseById(id) {
   }
 }
 
-export async function deletePhase(id) {
-
+export async function deletePhase(phaseId) {
   try {
 
     await db("phases")
-      .where({ phase_id: id })
+      .where({ phase_id: phaseId })
       .del();
 
     return {
-      success: true
+      success: true,
+      data: {
+        phase_id: phaseId
+      }
     };
 
   } catch (error) {

@@ -5,7 +5,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      watch: {}
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()]

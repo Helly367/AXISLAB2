@@ -1,30 +1,33 @@
 export const up = function (knex) {
-    return knex.schema.createTable('members', table => {
+  return knex.schema.createTable("membres", (table) => {
 
-        table.increments('membre_id').primary();
+    table.increments("membre_id").primary();
 
-        table.string('nom').notNullable();
-        table.string('poste').notNullable();
-        table.string('role').nullable();
-        table.string('email').nullable();
-        table.string('photo').nullable();
+    table.string("nom").notNullable();
+    table.string("poste").notNullable();
+    table.string("role").notNullable();
 
-        table.integer('disponibilite').defaultTo(100);
-        table.integer('chargeMax').defaultTo(40);
-        table.integer('chargeActuelle').defaultTo(0);
+    table.string("sexe");
+    table.string("telephone");
+    table.string("email");
 
-        table.json('competences').nullable();
-        table.json('competencesRequises').nullable();
-        table.json('historique').nullable();
+    table.string("niveau_etude");
 
-        table.date('dateDebut').nullable();
-        
-        table.integer('project_id').unsigned().references('membre_id').inTable('projects').onDelete('CASCADE');
+    table.integer("disponibilite").defaultTo(100);
+    table.integer("charge_max").defaultTo(40);
+    table.integer("charge_actuelle").defaultTo(0);
 
-        table.timestamps(true, true);
-    });
+    table.json("competences").notNullable();
+    table.json("competences_requises").notNullable();
+
+    table.date("date_debut");
+
+    table.json("historique").notNullable();
+
+    table.timestamps(true, true);
+  });
 };
 
 export const down = function (knex) {
-    return knex.schema.dropTable('members');
+  return knex.schema.dropTable("membres");
 };

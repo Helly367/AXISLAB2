@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Close, Save, Person, Work, Email, School, Photo } from "@mui/icons-material";
+import { Close, Save, Person, Work, Email, School, Wc, Phone } from "@mui/icons-material";
 
 const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
     const [preview, setPreview] = useState("");
+
 
     const { register, control, handleSubmit, formState: { errors }, reset } = useForm({
         defaultValues: {
@@ -25,6 +26,9 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
         name: 'competences'
     });
 
+    console.log("img previeu", preview);
+
+
     const onSubmit = (data) => {
 
         const competencesRequisesArray = data.competencesRequises
@@ -34,11 +38,6 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                 .filter(Boolean)
             : [];
 
-        const photoFile = data.photo?.[0];
-
-        const photoUrl = photoFile
-            ? URL.createObjectURL(photoFile)
-            : "";
 
         const newMember = {
             id: Date.now(),
@@ -46,7 +45,6 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
             poste: data.poste,
             role: data.role,
             email: data.email,
-            photo: photoUrl || preview,
             disponibilite: Number(data.disponibilite) || 100,
             chargeMax: Number(data.chargeMax) || 40,
             chargeActuelle: 0,
@@ -98,8 +96,10 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                                 required: 'Le nom est requis',
                                 minLength: { value: 2, message: 'Minimum 2 caractères' }
                             })}
-                            className="w-full p-3 border-2 border-gray-400 rounded-md"
-                            placeholder="Ex: Jean Dupont"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            placeholder="Ex: Helly vibe's"
                         />
 
                         {errors.nom && (
@@ -117,7 +117,9 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                         <input
                             type="text"
                             {...register('poste', { required: 'Le poste est requis' })}
-                            className="w-full p-3 border-2 border-gray-400 rounded-md"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="Chef projet, Dev..."
                         />
                     </div>
@@ -131,8 +133,55 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                         <input
                             type="text"
                             {...register('role', { required: 'Le rôle est requis' })}
-                            className="w-full p-3 border-2 border-gray-400 rounded-md"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
+                    </div>
+
+                    {/* contacte */}
+                    <div className='grid grid-cols-2 gap-4'>
+
+                        {/* sexe */}
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                <Wc className="inline mr-2 text-primary" />
+                                Sexe
+                            </label>
+
+                            <select
+                                type="text"
+                                {...register('sexe')}
+                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder='Ex: 0991631180 '
+                            >
+                                <option value="Homme">Homme</option>
+                                <option value="Femme">Femme</option>
+                                <option value="Personaliser">Personaliser</option>
+                            </select>
+
+
+                        </div>
+
+                        {/* Tel */}
+                        <div>
+                            <label className="block text-sm font-medium mb-2">
+                                <Phone className="inline mr-2 text-primary" />
+                                Numero telephone
+                            </label>
+
+                            <input
+                                type="number"
+                                {...register('telephone')}
+                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder='Ex: 0991631180 '
+                            />
+                        </div>
+
                     </div>
 
                     {/* Email */}
@@ -145,70 +194,40 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                         <input
                             type="email"
                             {...register('email')}
-                            className="w-full p-3 border-2 border-gray-400 rounded-md"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            placeholder='Ex: hellyvibes@gmail.com'
                         />
                     </div>
 
-                    {/* Disponibilité */}
-                    <div className="grid md:grid-cols-2 gap-4">
 
-                        <input
-                            type="number"
-                            placeholder="Disponibilité %"
-                            {...register('disponibilite', { valueAsNumber: true })}
-                            className="p-3 border-2 border-gray-400 rounded-md"
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Charge max (h/semaine)"
-                            {...register('chargeMax', { valueAsNumber: true })}
-                            className="p-3 border-2 border-gray-400 rounded-md"
-                        />
-
-                    </div>
-
-                    {/* Photo */}
-                    <div className="flex flex-col gap-3">
-
-                        <label className="text-sm font-medium">
-                            <Photo className="inline mr-2 text-primary" />
-                            Photo
+                    {/* Niveau d'etude */}
+                    <div>
+                        <label className="block text-sm font-medium mb-2">
+                            <School className="inline mr-2 text-primary" />
+                            Niveau d'étude
                         </label>
 
-                        <div className="flex items-center gap-6 self-center">
-
-                            <img
-                                src={preview || "https://via.placeholder.com/150"}
-                                alt=""
-                                className="w-40 h-40 rounded-full border object-cover"
-                            />
-
-                            <label
-                                htmlFor="photo"
-                                className="bg-blue-600 p-2 rounded-xl text-white cursor-pointer">
-                                Sélectionner une photo
-                            </label>
-
-                            <input
-                                id="photo"
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                {...register('photo')}
-                                onChange={(e) => {
-
-                                    const file = e.target.files?.[0];
-
-                                    if (file) {
-                                        setPreview(URL.createObjectURL(file));
-                                    }
-
-                                }}
-                            />
-
-                        </div>
+                        <input
+                            type="email"
+                            {...register('email')}
+                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                focus:outline-none focus:bg-white focus:border-blue-500
+                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            placeholder='Ex: hellyvibes@gmail.com'
+                        />
                     </div>
+
+
+
+
+
+
+
+
+
+
 
                     {/* Compétences */}
                     <div>
@@ -226,7 +245,9 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                                     {...register(`competences.${index}`, {
                                         required: 'Compétence requise'
                                     })}
-                                    className="flex-1 p-2 border-2 border-gray-400 rounded-md"
+                                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                                        focus:outline-none focus:bg-white focus:border-blue-500
+                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
 
                                 {fields.length > 1 && (
@@ -250,20 +271,7 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
                     </div>
 
-                    {/* Compétences requises */}
-                    <div>
 
-                        <label className="text-sm font-medium">
-                            Compétences requises (séparées par ,)
-                        </label>
-
-                        <input
-                            type="text"
-                            {...register('competencesRequises')}
-                            className="w-full p-3 border-2 border-gray-400 rounded-md"
-                        />
-
-                    </div>
 
                     {/* Buttons */}
                     <div className="flex justify-end gap-3 border-t pt-4">

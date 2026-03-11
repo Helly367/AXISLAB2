@@ -17,13 +17,13 @@ import {
     Schedule,
 
 } from "@mui/icons-material";
-import ModalAddCampagne from '../ModalAddCampagne';
-import ModalEditCampagne from '../ModalEditCampagne';
-import CampaignPlanning from '../CampaignPlanning';
-import CampaignResults from '../CampaignResults';
-import CampaignBudget from '../CampaignBudget';
+import ModalAddCampagne from './ModalAddCampagne';
+import ModalEditCampagne from './ModalEditCampagne';
+import CampaignPlanning from './CampaignPlanning';
+import CampaignResults from './CampaignResults';
+import CampaignBudget from './CampaignBudget';
 
-const CampagneList = ({ onUpdateCampagnes, budgetGlobal }) => {
+const CampagnesContent = ({ onUpdateCampagnes, budgetGlobal }) => {
     const [campagnes, setCampagnes] = useState([
         {
             id: 1,
@@ -641,4 +641,4 @@ const CampagneList = ({ onUpdateCampagnes, budgetGlobal }) => {
     );
 };
 
-export default CampagneList;
+export default CampagnesContent;

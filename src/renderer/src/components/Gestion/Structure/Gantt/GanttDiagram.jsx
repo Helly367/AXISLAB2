@@ -6,13 +6,12 @@ import DependencyArrow from "./DependencyArrow";
 import CriticalPathIndicator from "./CriticalPathIndicator";
 import { calculateCriticalPath, detectConflicts } from "../../../../functions/math";
 import useResponsiveGantt from "../../../../hooks/useResponsiveGantt";
+import { usePhases } from "../../../../hooks/usePhase";
 
-const EnterpriseGantt = ({
-    phases = [],
-    dependencies = [],
-    milestones = [],
-    onPhaseUpdate
-}) => {
+
+const EnterpriseGantt = ({ dependencies = [], milestones = [], onPhaseClick }) => {
+
+    const { phases } = usePhases();
 
     const containerRef = useRef(null);
     const [scale, setScale] = useResponsiveGantt(containerRef);
@@ -42,13 +41,13 @@ const EnterpriseGantt = ({
             <div className="relative  mt-4">
                 {sortedPhases.map((phase, index) => (
                     <PhaseBar
-                        key={phase.id}
+                        key={phase.phase_id}
                         phase={phase}
                         index={index}
                         scale={scale}
-                        onUpdate={onPhaseUpdate}
-                        isCritical={criticalPath.includes(phase.id)}
+                        isCritical={criticalPath.includes(phase.phase_id)}
                         conflicts={conflicts}
+                        onPhaseClick={onPhaseClick}
                     />
                 ))}
 

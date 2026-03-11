@@ -72,6 +72,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
             return;
         }
 
+        setLoading(false);
         handleClose();
     };
 

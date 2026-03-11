@@ -2,14 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { getPhaseWidth, getPositionX } from "../../../../functions/layout";
 
-const PhaseBar = ({
-    phase,
-    index,
-    scale,
-    onUpdate,
-    isCritical,
-    conflicts = [],
-}) => {
+const PhaseBar = ({ phase, index, scale, isCritical, conflicts = [], onPhaseClick }) => {
 
     const left = getPositionX(phase.date_debut, scale);
     const width = getPhaseWidth(phase, scale);
@@ -32,7 +25,7 @@ const PhaseBar = ({
             whileHover={{ scale: 1.02 }}
             drag="x"
             dragMomentum={false}
-            onDoubleClick={() => onUpdate?.(phase)}
+            onClick={() => onPhaseClick(phase.phase_id)}
         >
             <div className="text-white px-3 text-[14px] font-bold truncate">
                 {phase.title}

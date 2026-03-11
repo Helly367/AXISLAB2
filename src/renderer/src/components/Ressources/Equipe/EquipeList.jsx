@@ -104,25 +104,6 @@ const EquipeList = ({
        RENDER VIEW
     =============================== */
 
-    if (!members || members.length === 0) {
-        return (
-            <div className="text-center py-16 bg-white rounded-lg shadow-md">
-                <p className="text-gray-500 text-lg font-medium">
-                    Aucun membre n’a encore été ajouté
-                </p>
-                <p className="text-sm text-gray-400 mt-2">
-                    Cliquez sur le bouton Ajouter pour commencer à constituer l’équipe
-                </p>
-
-                <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="mt-6 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
-                >
-                    Ajouter un membre
-                </button>
-            </div>
-        );
-    }
 
     const renderContent = () => {
 
@@ -250,10 +231,32 @@ const EquipeList = ({
     };
 
     return (
+
         <div className="w-full">
 
-            {renderContent()}
+            {/* Message si aucun membre */}
+            {(!members || members.length === 0) && (
+                <div className="text-center py-16 bg-white rounded-lg shadow-md">
+                    <p className="text-gray-500 text-lg font-medium">
+                        Aucun membre n’a encore été ajouté
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">
+                        Cliquez sur le bouton Ajouter pour commencer à constituer l’équipe
+                    </p>
 
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="mt-6 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700"
+                    >
+                        Ajouter un membre
+                    </button>
+                </div>
+            )}
+
+            {/* Contenu de la liste ou grid */}
+            {members && members.length > 0 && renderContent()}
+
+            {/* Modals */}
             <AjouterMembre
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
@@ -274,6 +277,7 @@ const EquipeList = ({
             />
 
         </div>
+
     );
 };
 

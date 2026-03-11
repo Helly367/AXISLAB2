@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
-import { ArrowBack, Person, CalendarToday, Edit } from "@mui/icons-material";
+import React, { useMemo, useState } from 'react';
+import { ArrowBack, Person, CalendarToday, Edit, Delete } from "@mui/icons-material";
 import { useParams } from 'react-router-dom';
+import DeleteConfirm from '../../../widjets/DeleteConfirm';
+import { usePhases } from '../../../../hooks/usePhase';
 
 const formatDate = (date) => {
     if (!date) return "-";
@@ -28,6 +30,10 @@ const generateNiceColor = () => {
 
 const PhaseItem = ({ phases = [], onBack, onEdit }) => {
     const { phase_id } = useParams();
+    const [openDelete, setOpenDelete] = useState(false);
+    const { deletePhase } = usePhases();
+
+    const color = useMemo(() => generateNiceColor(), []);
 
     const phase = useMemo(
         () => phases.find(p => p.phase_id === Number(phase_id)),
@@ -38,26 +44,21 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
     if (!phase) {
         return (
             <div className="text-center py-10">
-                <p className="text-red-500">Phase non trouvée</p>
-                <button
-                    onClick={onBack}
-                    className="text-blue mt-4 font-medium"
-                >
+                <p className="text-red-500 text-2xl font-bold">Phase non trouvée</p>
+                <button onClick={onBack} className="text-blue mt-4 font-medium bg-opacity-10 hover:bg-opacity-20 transition-colors px-4 py-2 rounded-lg">
                     Retour
                 </button>
             </div>
         );
     }
 
-    const tasks = phase.taches || [];
-    const members = phase.membres || [];
 
-
-    const color = useMemo(() => generateNiceColor(), []);
+    const tasks = Array.isArray(phase?.taches) ? phase.taches : [];
+    const members = Array.isArray(phase?.membres) ? phase.membres : [];
 
 
     return (
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
 
             {/* Header */}
             <div className="flex items-center gap-4 pb-6 border-b-2 border-gray-200 mb-6">
@@ -128,9 +129,10 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
             </div>
 
             {/* Dates + Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pt-6 border-t-2 border-gray-200">
+            <div className="flex flex-col  gap-10 pt-6  border-gray-200">
 
-                <div className="flex gap-6 flex-wrap">
+                <div className="flex gap-6 flex-wrap border-b-2 pb-6 border-gray-200">
+
 
                     <div className="flex items-center gap-2">
                         <CalendarToday className="text-green-500" />
@@ -150,12 +152,35 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
 
                 </div>
 
-                <button
-                    onClick={() => onEdit(phase)}
-                    className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    <Edit /> Modifier
-                </button>
+                <div className='flex items-center self-end gap-6'>
+
+                    <button
+                        onClick={() => onEdit(phase)}
+                        className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                        <Edit /> Modifier
+                    </button>
+
+                    <button
+                        onClick={() => setOpenDelete(true)}
+                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                        <Delete /> Supprimer
+                    </button>
+
+
+                </div>
+
+
+
             </div>
+
+            <DeleteConfirm
+                title={`Voulez-vous vraiment supprimer la phase ${phase.title}`}
+                open={openDelete}
+                onClose={() => setOpenDelete(false)}
+                onConfirm={() => {
+                    deletePhase(phase_id, phase);
+                    setOpenDelete(false);
+                }} />
         </div>
     );
 };
