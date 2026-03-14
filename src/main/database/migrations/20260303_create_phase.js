@@ -12,8 +12,7 @@ export const up = function (knex) {
     table.json("taches").notNullable();
     table.json("membres").notNullable();
 
-    table
-      .integer("project_id").unsigned().references("projet_id").inTable("projects").onDelete("CASCADE");
+    table.integer("project_id").unsigned().references("projet_id").inTable("projects").onDelete("CASCADE");
 
     table.timestamps(true, true);
   });

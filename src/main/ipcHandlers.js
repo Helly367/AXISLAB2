@@ -3,8 +3,8 @@ import {getAllProjects, getProjectById,createProject,updateProject,deleteProject
 import { createPhase, updatePhase, getAllPhases, getPhaseById,deletePhase } from './handlers/phaseHandlers.js';
 import { minimizeWindow, maximizeWindow, closeWindow } from './handlers/windowHandlers.js';
 import { createDependency, getAllDependencies, getDependenciesByProject, deleteDependency } from './handlers/dependenciesHandlers.js';
-// import { createMembre, updateMembre, getAllMembres, deleteMembre } from './handlers/membreHandlers.js';
-import { createJalon , getAllJalons , updateJalon , deletejalon} from './handlers/jalonHandlers.js';
+import { createJalon, getAllJalons, updateJalon, deletejalon } from './handlers/jalonHandlers.js';
+import { createMembre ,deleteMembre , getAllMembres ,getMembreById , updateMembre } from './handlers/membreHandlers.js';
 
 export function setupIpcHandlers() {
 
@@ -78,26 +78,6 @@ ipcMain.handle("dependency-delete", (_, id) =>
 );
   
   
-   /* ===============================
-     Membres   HANDLERS
-  =============================== */
-  // ipcMain.handle("membre-create" , async (_, data) => {
-  //   return await createMembre(data);
-  // });
-
-  // ipcMain.handle("membre-update", async (_, id, updateData) => {
-  //   return await updateMembre(id, updateData);
-  // });
-
-  // ipcMain.handle("membre-get", async (_, id) => {
-  //   return await getMembreById(id);
-  // });
-
-  // ipcMain.handle("membre-delete", async (_, id) => {
-  //   return await deleteMembre(id);
-  // });
-  
-  
     /* ===============================
      JALON HANDLERS
   =============================== */
@@ -118,6 +98,37 @@ ipcMain.handle("dependency-delete", (_, id) =>
   });
   
   
+   /* ===============================
+     MEMBRES HANDLERS
+  =============================== */
+  
+  ipcMain.handle("membre-create", async(_, memberData) => {
+     return await createMembre(memberData)
+  });
+  
+  ipcMain.handle("get-membres", async() => {
+    return await getAllMembres();
+  });
+  
+  ipcMain.handle("membre-getById", async(_, membre_id) => {
+     return await getMembreById(membre_id)
+  });
+  
+  ipcMain.handle("membre-update", async(_,membre_id , memberData) => {
+     return await updateMembre(membre_id ,memberData)
+  });
+  
+  ipcMain.handle("membre-delete", async(_,membre_id) => {
+     return await deleteMembre(membre_id)
+  });
+  
+  
+  /* ===============================
+    BUDGET HANDLERS
+  =============================== */
+  ipcMain.handle("global-budget-create", async(_, budgetData) => {
+      return await createGlobalBudget(budgetData)    
+  });
 
   /* ===============================
      WINDOW HANDLERS

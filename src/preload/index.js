@@ -27,19 +27,25 @@ const api = {
   getDependencies: () => ipcRenderer.invoke('dependency-list'),
   getDependenciesByProject: (projectId) => ipcRenderer.invoke('dependency-project', projectId),
   deleteDependency: (id) => ipcRenderer.invoke('dependency-delete', id),
-  
- // Membres - CRUD complet 
-createMembre: (data) => ipcRenderer.invoke("membre-create", data),
-getMembres: () => ipcRenderer.invoke("membre-list"),
-getMembreById: (id) => ipcRenderer.invoke("membre-get", id),
-updateMembre: (id, data) => ipcRenderer.invoke("membre-update", id, data),
-deleteMembre: (id) => ipcRenderer.invoke("membre-delete", id) ,
+
 
   // Jalons - CRUD complet 
 createJalon: (jalonData) => ipcRenderer.invoke('create-jalon', jalonData),
 getJalons: () => ipcRenderer.invoke('get-jalons'),
 updateJalon: (jalon_id, jalonData) => ipcRenderer.invoke("update-jalon", jalon_id, jalonData),
 deletejalon: (jalon_id) => ipcRenderer.invoke('jalon-delete', jalon_id),
+
+  
+    // Membres - CRUD complet 
+createMembre: (memberData) => ipcRenderer.invoke('membre-create', memberData),
+getAllMembres: () => ipcRenderer.invoke('get-membres'),
+getMembreById: (membre_id) => ipcRenderer.invoke("membre-getById", membre_id),
+updateMembre: (membre_id, memberData) => ipcRenderer.invoke("membre-update", membre_id, memberData),
+deleteMembre: (membre_id) => ipcRenderer.invoke('membre-delete', membre_id),
+
+  // BUDGET - CRUD complet 
+  createGlobalBudget: (budgetData) => ipcRenderer.invoke('global-budget-create', budgetData),
+ 
 
   
  

@@ -1,9 +1,9 @@
 import React from "react";
-import { Delete } from "@mui/icons-material";
+import { Warning } from "@mui/icons-material";
 
-const DeleteConfirm = ({ open, onClose, onConfirm, title = "Supprimer cet élément ?", message = "Cette action est irréversible." }) => {
+const WarningContent = ({ onClose, title = "Supprimer cet élément ?", message = "" }) => {
 
-    if (!open) return null;
+
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-50">
@@ -19,8 +19,8 @@ const DeleteConfirm = ({ open, onClose, onConfirm, title = "Supprimer cet élém
 
                 {/* ICON */}
                 <div className="flex justify-center mb-4">
-                    <div className="bg-red-100 text-red-600 p-3 rounded-full">
-                        <Delete fontSize="large" />
+                    <div className="bg-yellow-100 text-yellow-600 p-3 rounded-full">
+                        <Warning fontSize="large" />
                     </div>
                 </div>
 
@@ -39,17 +39,11 @@ const DeleteConfirm = ({ open, onClose, onConfirm, title = "Supprimer cet élém
 
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-100"
+                        className="px-4 py-2 text-sm rounded-lg border   bg-yellow-600 text-white hover:bg-yellow-700"
                     >
-                        Annuler
+                        D'accord
                     </button>
 
-                    <button
-                        onClick={onConfirm}
-                        className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
-                    >
-                        Supprimer
-                    </button>
 
                 </div>
 
@@ -58,4 +52,4 @@ const DeleteConfirm = ({ open, onClose, onConfirm, title = "Supprimer cet élém
     );
 };
 
-export default DeleteConfirm;
+export default WarningContent;

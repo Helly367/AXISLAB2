@@ -8,35 +8,35 @@ import React, {
 } from 'react';
 import { alertService } from '../functions/alertService';
 
-const ProjectsContext = createContext();
+const MembresContext = createContext();
 
-export const ProjectsProvider = ({ children }) => {
+export const MembresProvider = ({ children }) => {
 
-    const [projects, setProjects] = useState([]);
-    const [activeProject, setActiveProject] = useState(null);
+    const [membres, setMembres] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     /* =========================
        LOAD PROJECTS
     ========================== */
-    const loadProjects = useCallback(async () => {
+    const loadMembres = useCallback(async () => {
         try {
             setLoading(true);
 
-            const result = await window.api.getProjects();
+            const result = await window.api.getAllMembres();
 
             if (result.success) {
-                setProjects(result.data || []);
+                setMembres(result.data || []);
                 setError(null);
             } else {
                 throw new Error(result.error);
             }
 
         } catch (err) {
-            console.error("Erreur chargement projets:", err);
-            setError("Impossible de charger les projets");
-            toast.error("Impossible de charger les projets");
+            console.error("Erreur chargement des Membres:", err);
+            setError("Impossible de charger les Membres");
+            alertService.error("Impossible de charger les Membres")
+            return { success: false, error: err.message };
         } finally {
             setLoading(false);
         }
@@ -46,38 +46,31 @@ export const ProjectsProvider = ({ children }) => {
        INITIAL LOAD
     ========================== */
     useEffect(() => {
-        loadProjects();
-    }, [loadProjects]);
+        loadMembres();
+    }, [loadMembres]);
+
 
     /* =========================
-       AUTO RESTORE ACTIVE PROJECT
+       CREATE MEMBRE
     ========================== */
-    useEffect(() => {
-        if (projects.length === 0) return;
-
-        const savedId = localStorage.getItem("activeProjectId");
-        if (!savedId) return;
-
-        const found = projects.find(p => p.projet_id === Number(savedId));
-        if (found) setActiveProject(found);
-
-    }, [projects]);
-
-    /* =========================
-       CREATE PROJECT
-    ========================== */
-    const createProject = useCallback(async (projectData) => {
+    const createMembre = useCallback(async (membreData) => {
         try {
-            const result = await window.api.createProject(projectData);
+            const result = await window.api.createMembre(membreData);
 
-            if (!result.success) throw new Error(result.error);
+            if (!window.api?.createPhase) {
+                throw new Error("API Electron non disponible");
+            }
 
+            if (!result) {
+                throw new Error("Aucune réponse du backend");
+            }
+
+            if (!result.success) {
+                throw new Error(result.error || "Erreur inconnue");
+            }
             // Optimisation : on ajoute sans reload complet
-            setProjects(prev => [...prev, result.data]);
-            setActiveProject(result.data);
-
-            localStorage.setItem("activeProjectId", result.data.projet_id);
-            alertService.success("Projet créé avec succès !")
+            setMembres(prev => [...prev, result.data]);
+            alertService.success(`Le membre ${result.data.nomComplet} a été ajouter avec succès !`)
 
             return { success: true, data: result.data };
 
@@ -91,43 +84,87 @@ export const ProjectsProvider = ({ children }) => {
     /* =========================
        UPDATE PROJECT
     ========================== */
-    const updateProject = useCallback(async (projet_id, updateData) => {
+    const updateMembre = useCallback(async (membre_id, membreData) => {
         try {
-            const result = await window.api.updateProject(projet_id, updateData);
-            if (!result.success) return result;
+            // 1. Vérifier l'API d'abord
+            if (!window.api?.updateMembre) {
+                throw new Error("API Electron non disponible");
+            }
 
-            setProjects(prev =>
-                prev.map(p => p.projet_id === projet_id ? { ...p, ...updateData } : p)
+            // 2. Appel à l'API
+            const result = await window.api.updateMembre(membre_id, membreData);
+
+            // 3. Vérifier que result existe
+            if (!result) {
+                throw new Error("Aucune réponse du backend");
+            }
+
+            // 4. Vérifier et logger les erreurs en toute sécurité
+            if (result.errors) {
+                console.log("Erreurs complètes :", result.errors);
+                // Vérifier que result.errors est un tableau avant d'accéder à l'index 0
+                if (Array.isArray(result.errors) && result.errors.length > 0) {
+                    console.log("Première erreur :", result.errors[0]);
+                    console.log("Message :", result.errors[0]?.message);
+                }
+            }
+
+            // 5. Vérifier le succès
+            if (!result.success) {
+                if (result?.errors?.length) {
+                    return {
+                        success: false,
+                        errors: result.errors
+                    };
+                }
+                return {
+                    success: false,
+                    errors: [
+                        { field: "server", message: result.error || "Erreur inconnue" }
+                    ]
+                };
+            }
+
+            // 6. Mise à jour optimiste
+            setMembres(prev =>
+                prev.map(p => p.membre_id === membre_id ? { ...p, ...membreData } : p)
             );
 
-            if (activeProject?.projet_id === projet_id) {
-                setActiveProject(prev => ({ ...prev, ...updateData }));
+            if (result.data?.nomComplet) {
+                alertService.success(`Le membre ${result.data.nomComplet} a été modifié avec succès !`);
+            } else {
+                alertService.success(`Le membre a été modifié avec succès !`);
             }
 
             return { success: true };
 
         } catch (err) {
             console.error("Erreur mise à jour:", err);
-            return { success: false, errors: err.errors || [{ field: "server", message: "Erreur serveur" }] };
-        }
-    }, [activeProject]);
 
-    /* =========================
-       DELETE PROJECT
-    ========================== */
-    const deleteProject = useCallback(async (projet_id) => {
-        try {
-            const result = await window.api.deleteProject(projet_id);
-            if (!result.success) throw new Error(result.error);
-
-            setProjects(prev => prev.filter(p => p.projet_id !== projet_id));
-
-            if (activeProject?.projet_id === projet_id) {
-                setActiveProject(null);
-                localStorage.removeItem("activeProjectId");
+            // Si err contient déjà la structure { success, errors }
+            if (err && typeof err === 'object' && 'errors' in err) {
+                return err;
             }
 
-            toast.success("Projet supprimé !");
+            // Sinon, format standard
+            return {
+                success: false,
+                errors: [{ field: "server", message: err.message || "Erreur serveur" }]
+            };
+        }
+    }, [setMembres]); // N'oubliez pas les dépendances !
+
+    // /* =========================
+    //    DELETE MEMBRE
+    // ========================== */
+    const deleteMembre = useCallback(async (membre_id) => {
+        try {
+            const result = await window.api.deleteMembre(membre_id);
+            if (!result.success) throw new Error(result.error);
+
+            setMembres(prev => prev.filter(m => m.membre_id !== membre_id));
+
+            alertService.success(`Membre supprimé !`);
             return { success: true };
 
         } catch (err) {
@@ -135,82 +172,46 @@ export const ProjectsProvider = ({ children }) => {
             toast.error("Erreur lors de la suppression");
             return { success: false, error: err.message };
         }
-    }, [activeProject]);
-
-    /* =========================
-       SELECT ACTIVE PROJECT
-    ========================== */
-    const selectActiveProject = useCallback((project) => {
-        if (!project) {
-            setActiveProject(null);
-            localStorage.removeItem("activeProjectId");
-            return;
-        }
-
-        setActiveProject(project);
-        localStorage.setItem("activeProjectId", project.projet_id);
     }, []);
 
-    /* =========================
-       UTILITIES
-    ========================== */
-    const getProjectById = useCallback(
-        (projet_id) => projects.find(p => p.projet_id === Number(projet_id)),
-        [projects]
-    );
 
-    const getProjectsByStatus = useCallback(
-        (status) => projects.filter(p => p.status === status),
-        [projects]
-    );
 
-    const getProjectsCount = useCallback(
-        () => projects.length,
-        [projects]
-    );
+
 
     /* =========================
        MEMOIZED CONTEXT VALUE
     ========================== */
     const value = useMemo(() => ({
-        projects,
-        activeProject,
+        membres,
         loading,
         error,
-        loadProjects,
-        createProject,
-        updateProject,
-        deleteProject,
-        selectActiveProject,
-        getProjectById,
-        getProjectsByStatus,
-        getProjectsCount
+        loadMembres,
+        createMembre,
+        updateMembre,
+        deleteMembre
+
     }), [
-        projects,
-        activeProject,
+        membres,
         loading,
         error,
-        loadProjects,
-        createProject,
-        updateProject,
-        deleteProject,
-        selectActiveProject,
-        getProjectById,
-        getProjectsByStatus,
-        getProjectsCount
+        loadMembres,
+        createMembre,
+        updateMembre,
+        deleteMembre
+
     ]);
 
     return (
-        <ProjectsContext.Provider value={value}>
+        <MembresContext.Provider value={value}>
             {children}
-        </ProjectsContext.Provider>
+        </MembresContext.Provider>
     );
 };
 
-export const useProjects = () => {
-    const context = useContext(ProjectsContext);
+export const useMembres = () => {
+    const context = useContext(MembresContext);
     if (!context) {
-        throw new Error("useProjects doit être utilisé dans un ProjectsProvider");
+        throw new Error("useProjects doit être utilisé dans un MembreProvider");
     }
     return context;
 };

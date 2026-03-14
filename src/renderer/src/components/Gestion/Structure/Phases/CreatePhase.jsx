@@ -1,12 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Close, Save, CalendarToday, Description, Title, Group, Task } from "@mui/icons-material";
+import { Close, Save, CalendarToday, Description, Title, Group, Task, PersonAdd } from "@mui/icons-material";
 import { usePhases } from '../../../../hooks/usePhase';
+import { useMembres } from '../../../../hooks/useMembers';
 import { motion } from "framer-motion";
+import AjouterMembre from '../../../Ressources/Equipe/AjouteMembre';
 
 const ModalCreatePhase = ({ isOpen, onClose, project }) => {
     const { createPhase } = usePhases();
-    const [loading, setLoading] = useState(false)
+    const { membres, loadMembres } = useMembres();
+    const [loading, setLoading] = useState(false);
+    const [loadingMembres, setLoadingMembres] = useState(false);
+    const [isAddMembreModalOpen, setIsAddMembreModalOpen] = useState(false); // État pour le modal d'ajout
+
+    // Charger les membres quand la modale s'ouvre
+    useEffect(() => {
+        if (isOpen && project?.projet_id) {
+            const fetchMembres = async () => {
+                setLoadingMembres(true);
+                await loadMembres();
+                setLoadingMembres(false);
+            };
+            fetchMembres();
+        }
+    }, [isOpen, project?.projet_id, loadMembres]);
 
     const {
         register,
@@ -22,7 +39,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
             date_debut: '',
             date_fin: '',
             taches: [''],
-            membres: ['']
+            membres: []
         }
     });
 
@@ -40,7 +57,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                 date_debut: '',
                 date_fin: '',
                 taches: [''],
-                membres: ['']
+                membres: []
             });
         }
     }, [isOpen, reset]);
@@ -51,7 +68,11 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
     };
 
     const onSubmit = async (data) => {
-        setLoading(true)
+        setLoading(true);
+
+        const membresSelectionnes = (data.membres || [])
+            .map(m => m?.toString().trim())
+            .filter(Boolean);
 
         const cleanedPhase = {
             ...data,
@@ -59,10 +80,8 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
             date_debut: new Date(data.date_debut).toISOString(),
             date_fin: new Date(data.date_fin).toISOString(),
             taches: (data.taches || []).map(t => t.trim()).filter(Boolean),
-            membres: (data.membres || []).map(m => m.trim()).filter(Boolean)
+            membres: membresSelectionnes
         };
-
-        await new Promise(resolve => setTimeout(resolve, 3000));
 
         const result = await createPhase(cleanedPhase);
 
@@ -77,6 +96,15 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
     };
 
     const dateDebut = watch('date_debut');
+
+    // Filtrer les membres du projet en cours
+    const membresDuProjet = useMemo(() => {
+        if (!membres || !project?.projet_id) return [];
+        return membres.filter(m => m.project_id === project.projet_id);
+    }, [membres, project?.projet_id]);
+
+    console.log("les membres ", membres);
+
 
     if (!isOpen) return null;
 
@@ -231,42 +259,92 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                         </button>
                     </div>
 
-                    {/* Membres */}
+                    {/* Membres - Version avec sélection ET possibilité d'ajouter */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <Group className="inline mr-2 text-blue" />
-                            Membres
+                            Membres assignés à la phase
                         </label>
 
-                        <div className="space-y-2">
-                            {membreFields.map((field, index) => (
-                                <div key={field.id} className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        {...register(`membres.${index}`)}
-                                        className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
+                        {loadingMembres ? (
+                            <div className="text-center py-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                <p className="text-gray-500 mt-2">Chargement des membres...</p>
+                            </div>
+                        ) : membresDuProjet.length === 0 ? (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                                <p className="text-yellow-700 text-lg font-medium mb-3">
+                                    Aucun membre dans ce projet
+                                </p>
+                                <p className="text-sm text-yellow-600 mb-4">
+                                    Vous devez d'abord ajouter des membres à l'équipe avant de pouvoir les assigner à une phase.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddMembreModalOpen(true)}
+                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                                >
+                                    <PersonAdd /> Ajouter un membre maintenant
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                        <div className="space-y-2">
+                                            {membreFields.map((field, index) => (
+                                                <div key={field.id} className="flex gap-2 items-center">
+                                                    <select
+                                                        {...register(`membres.${index}`)}
+                                                        className="flex-1 px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                                                     focus:outline-none focus:bg-white focus:border-blue-500
-                                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        placeholder={`Membre ${index + 1}`}
-                                    />
-                                    {membreFields.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removeMembre(index)}
-                                            className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
-                                            ×
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                                    transition-all duration-300"
+                                                    >
+                                                        <option value="">Sélectionner un membre...</option>
+                                                        {membresDuProjet.map(member => (
+                                                            <option
+                                                                key={member.membre_id}
+                                                                value={member.nomComplet}
+                                                            >
+                                                                {member.nomComplet} - {member.poste}
+                                                            </option>
+                                                        ))}
+                                                    </select>
 
-                        <button
-                            type="button"
-                            onClick={() => appendMembre('')}
-                            className="mt-2 text-blue hover:text-blue-800 text-sm font-medium">
-                            + Ajouter un membre
-                        </button>
+                                                    {membreFields.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeMembre(index)}
+                                                            className="px-3 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600">
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => appendMembre('')}
+                                                className="text-blue hover:text-blue-800 text-sm font-medium">
+                                                + Ajouter un autre membre
+                                            </button>
+
+                                            <span className="text-gray-300 mx-2">|</span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsAddMembreModalOpen(true)}
+                                                className="text-green-600 hover:text-green-800 text-sm font-medium flex items-center gap-1">
+                                                <PersonAdd fontSize="small" /> Ajouter un nouveau membre
+                                            </button>
+                                </div>
+
+                                {/* Petit rappel du nombre de membres disponibles */}
+                                <p className="text-xs text-gray-500 mt-2">
+                                    {membresDuProjet.length} membre(s) disponible(s) dans l'équipe
+                                </p>
+                            </>
+                        )}
                     </div>
 
                     {/* Boutons */}
@@ -280,12 +358,11 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
 
                         <motion.button
                             type="submit"
-                            disabled={loading || Object.keys(errors).length > 0}
+                            disabled={loading || Object.keys(errors).length > 0 || loadingMembres}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
                         >
-
                             {loading ? (
                                 <>
                                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -296,16 +373,25 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                 </>
                             ) : (
                                 <>
-                                    <Save /> Créer
-
+                                        <Save /> Créer
                                 </>
                             )}
-
                         </motion.button>
                     </div>
 
                 </form>
             </div>
+
+            {/* Modal d'ajout de membre */}
+            <AjouterMembre
+                isOpen={isAddMembreModalOpen}
+                onClose={() => {
+                    setIsAddMembreModalOpen(false);
+                    // Recharger les membres après ajout
+                    loadMembres();
+                }}
+                project={project}
+            />
         </div>
     );
 };

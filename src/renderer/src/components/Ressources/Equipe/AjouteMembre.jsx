@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Close, Save, Person, Work, Email, School, Wc, Phone } from "@mui/icons-material";
+import { motion } from "framer-motion";
+import { useMembres } from '../../../hooks/useMembers';
 
-const AjouterMembre = ({ isOpen, onClose, onSave }) => {
-
-    const [preview, setPreview] = useState("");
-
+const AjouterMembre = ({ isOpen, onClose, project }) => {
+    const [loading, setLoading] = useState(false)
+    const { createMembre } = useMembres();
 
     const { register, control, handleSubmit, formState: { errors }, reset } = useForm({
         defaultValues: {
-            nom: '',
+            nomComplet: '',
             poste: '',
             role: '',
             email: '',
-            photo: '',
-            disponibilite: 100,
-            chargeMax: 40,
+            sexe: '',
+            telephone: '',
+            niveau_etude: '',
             competences: [''],
-            competencesRequises: ''
+
         }
     });
 
@@ -26,40 +27,70 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
         name: 'competences'
     });
 
-    console.log("img previeu", preview);
+
+    useEffect(() => {
+        if (isOpen) {
+            reset({
+                nomComplet: '',
+                poste: '',
+                role: '',
+                email: '',
+                sexe: '',
+                telephone: '',
+                niveau_etude: '',
+                competences: [''],
+            });
+        }
+    }, [isOpen, reset]);
 
 
-    const onSubmit = (data) => {
+    // Vérification au montage
+    useEffect(() => {
+        if (isOpen) {
+            if (!project) {
+                console.log("Attention: project est undefined");
+            }
+        }
+    }, [isOpen, project]);
 
-        const competencesRequisesArray = data.competencesRequises
-            ? data.competencesRequises
-                .split(',')
-                .map(c => c.trim())
-                .filter(Boolean)
-            : [];
-
-
-        const newMember = {
-            id: Date.now(),
-            nom: data.nom,
-            poste: data.poste,
-            role: data.role,
-            email: data.email,
-            disponibilite: Number(data.disponibilite) || 100,
-            chargeMax: Number(data.chargeMax) || 40,
-            chargeActuelle: 0,
-            competences: data.competences.filter(c => c.trim() !== ''),
-            competencesRequises: competencesRequisesArray,
-            dateDebut: new Date().toISOString().split('T')[0],
-            historique: []
-        };
-
-        onSave(newMember);
-
+    const handleClose = () => {
         reset();
-        setPreview("");
         onClose();
     };
+
+
+
+    const onSubmit = async (data) => {
+        setLoading(true);
+
+        try {
+            const newMember = {
+                ...data,
+                project_id: project.projet_id,
+                competences: (data.competences || []).map(m => m.trim()).filter(Boolean)
+            };
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            const result = await createMembre(newMember);
+
+            console.log(result);
+
+            if (!result || !result.success) {
+                console.error(result?.error || result?.errors || "Erreur inconnue");
+                setLoading(false); // ← Important : arrêter le loading même en cas d'erreur
+                return;
+            }
+
+            setLoading(false);
+            handleClose();
+
+        } catch (error) {
+            console.error("Erreur inattendue:", error);
+            setLoading(false); // ← Arrêter le loading en cas d'exception
+        }
+    };
+
+
 
     if (!isOpen) return null;
 
@@ -92,7 +123,7 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
                         <input
                             type="text"
-                            {...register('nom', {
+                            {...register('nomComplet', {
                                 required: 'Le nom est requis',
                                 minLength: { value: 2, message: 'Minimum 2 caractères' }
                             })}
@@ -102,8 +133,8 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                             placeholder="Ex: Helly vibe's"
                         />
 
-                        {errors.nom && (
-                            <p className="text-red-500 text-sm">{errors.nom.message}</p>
+                        {errors.nomComplet && (
+                            <p className="text-red-500 text-sm">{errors.nomComplet.message}</p>
                         )}
                     </div>
 
@@ -122,7 +153,12 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="Chef projet, Dev..."
                         />
+
+                        {errors.poste && (
+                            <p className="text-red-500 text-sm">{errors.poste.message}</p>
+                        )}
                     </div>
+
 
                     {/* Rôle */}
                     <div>
@@ -137,7 +173,12 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                                 focus:outline-none focus:bg-white focus:border-blue-500
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
+                        {errors.role && (
+                            <p className="text-red-500 text-sm">{errors.role.message}</p>
+                        )}
+
                     </div>
+
 
                     {/* contacte */}
                     <div className='grid grid-cols-2 gap-4'>
@@ -151,7 +192,9 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
                             <select
                                 type="text"
-                                {...register('sexe')}
+                                {...register('sexe',
+                                    { required: 'Veuillez selectionnez un sexe' }
+                                )}
                                 className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                                 focus:outline-none focus:bg-white focus:border-blue-500
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -162,6 +205,10 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                                 <option value="Personaliser">Personaliser</option>
                             </select>
 
+                            {errors.sexe && (
+                                <p className="text-red-500 text-sm">{errors.sexe.message}</p>
+                            )}
+
 
                         </div>
 
@@ -169,17 +216,23 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                         <div>
                             <label className="block text-sm font-medium mb-2">
                                 <Phone className="inline mr-2 text-primary" />
-                                Numero telephone
+                                Numéro téléphone
                             </label>
 
                             <input
                                 type="number"
-                                {...register('telephone')}
+                                {...register('telephone',
+                                    { required: 'Le numéro de téléphone est requis' }
+                                )}
                                 className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                                 focus:outline-none focus:bg-white focus:border-blue-500
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder='Ex: 0991631180 '
                             />
+
+                            {errors.telephone && (
+                                <p className="text-red-500 text-sm">{errors.telephone.message}</p>
+                            )}
                         </div>
 
                     </div>
@@ -193,12 +246,17 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
                         <input
                             type="email"
-                            {...register('email')}
+                            {...register('email',
+                                { required: "L'email de téléphone est requis" })}
                             className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                                 focus:outline-none focus:bg-white focus:border-blue-500
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder='Ex: hellyvibes@gmail.com'
                         />
+
+                        {errors.email && (
+                            <p className="text-red-500 text-sm">{errors.email.message}</p>
+                        )}
                     </div>
 
 
@@ -210,24 +268,20 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                         </label>
 
                         <input
-                            type="email"
-                            {...register('email')}
+                            type="text"
+                            {...register('niveau_etude',
+                                { required: "Veuillez renseignez le niveau d'étude" }
+                            )}
                             className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                                 focus:outline-none focus:bg-white focus:border-blue-500
                                 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder='Ex: hellyvibes@gmail.com'
                         />
+
+                        {errors.niveau_etude && (
+                            <p className="text-red-500 text-sm">{errors.niveau_etude.message}</p>
+                        )}
                     </div>
-
-
-
-
-
-
-
-
-
-
 
                     {/* Compétences */}
                     <div>
@@ -262,6 +316,7 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
                             </div>
                         ))}
 
+
                         <button
                             type="button"
                             onClick={() => append('')}
@@ -278,18 +333,37 @@ const AjouterMembre = ({ isOpen, onClose, onSave }) => {
 
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="px-6 py-2 border rounded-lg">
                             Annuler
                         </button>
 
-                        <button
+                        <motion.button
                             type="submit"
-                            className="bg-primary text-white px-6 py-2 rounded-lg flex items-center gap-2">
-                            <Save /> Ajouter
-                        </button>
+                            disabled={loading || Object.keys(errors).length > 0}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                        >
 
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Ajout en cours ...
+                                </>
+                            ) : (
+                                <>
+                                    <Save /> Ajouter
+
+                                </>
+                            )}
+
+                        </motion.button>
                     </div>
+
 
                 </form>
             </div>

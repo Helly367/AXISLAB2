@@ -3,6 +3,8 @@ import { useProjects } from "../hooks/useProjets";
 import { ProjectsProvider } from "../hooks/useProjets";
 import { PhaseProvider } from "../hooks/usePhase";
 import { JalonProvider } from "../hooks/useJalon";
+import { MembresProvider } from "../hooks/useMembers";
+import { BudgetsProvider } from "../hooks/useBudgets";
 import Accueil from "../components/Accueil";
 import Dashboard from "../components/Dashboard/Dashboard";
 import OpenProject from "../components/widjets/OpenProject";
@@ -43,15 +45,19 @@ function AppContent() {
 export default function App() {
   return (
     <ProjectsProvider>
-      <PhaseProvider>
-        <JalonProvider>
-        <TitleBar />
-        <ToastContainer />
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </JalonProvider>
-      </PhaseProvider>
+      <BudgetsProvider>
+        <MembresProvider>
+          <PhaseProvider>
+            <JalonProvider>
+              <TitleBar />
+              <ToastContainer />
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </JalonProvider>
+          </PhaseProvider>
+        </MembresProvider>
+      </BudgetsProvider>
     </ProjectsProvider>
   );
 }

@@ -1,23 +1,20 @@
 import db from "../database/db.js";
-import { membreSchema, normalizeMembreData } from "../database/schemas/membreSchema.js";
+import { membreSchema,normalizeMembreData } from "../database/schemas/membreSchema.js";
 
 function formatMembre(membre) {
   if (!membre) return null;
 
   return {
     membre_id: membre.membre_id,
-    nom: membre.nom,
+    nomComplet: membre.nomComplet,
     poste: membre.poste,
     role: membre.role,
     email: membre.email,
-    photo: membre.photo,
-    disponibilite: membre.disponibilite,
-    chargeMax: membre.chargeMax,
-    chargeActuelle: membre.chargeActuelle,
+    telephone: membre.telephone,
+    niveau_etude: membre.niveau_etude,
+    sexe: membre.sexe,
+    project_id : membre.project_id,
     competences: JSON.parse(membre.competences || "[]"),
-    competencesRequises: JSON.parse(membre.competencesRequises || "[]"),
-    dateDebut: membre.dateDebut,
-    historique: JSON.parse(membre.historique || "[]"),
     created_at: membre.created_at,
     updated_at: membre.updated_at
   };
@@ -46,11 +43,7 @@ export async function createMembre(data) {
     const [membre_id] = await db("membres").insert({
 
       ...value,
-
       competences: JSON.stringify(value.competences),
-      competences_requises: JSON.stringify(value.competences_requises),
-      historique: JSON.stringify(value.historique),
-
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -83,7 +76,7 @@ export async function getAllMembres() {
     const membres = await db("membres")
       .select("*")
       .orderBy("created_at", "desc");
-
+    
     return {
       success: true,
       data: membres.map(formatMembre)
@@ -134,9 +127,14 @@ export async function updateMembre(membreId, updateData) {
 
   try {
 
-    const cleaned = normalizeMembreData(updateData);
+    const {
+      membre_id,
+      created_at,
+      updated_at,
+      ...cleanData
+    } = updateData;
 
-    const { error, value } = membreSchema.validate(cleaned, {
+    const { error, value } = membreSchema.validate(cleanData, {
       abortEarly: false,
       stripUnknown: true
     });
@@ -157,17 +155,16 @@ export async function updateMembre(membreId, updateData) {
       .update({
 
         ...value,
-
         competences: JSON.stringify(value.competences),
-        competences_requises: JSON.stringify(value.competences_requises),
-        historique: JSON.stringify(value.historique),
-
         updated_at: new Date()
       });
 
     const membre = await db("membres")
       .where({ membre_id: membreId })
       .first();
+    
+    console.log(membre);
+    
 
     return {
       success: true,
@@ -207,21 +204,4 @@ export async function deleteMembre(membreId) {
 }
 
 
-import { ipcMain } from "electron";
-import {
-  createMembre,
-  getAllMembres,
-  getMembreById,
-  updateMembre,
-  deleteMembre
-} from "../handlers/membreHandler.js";
 
-ipcMain.handle("membre:create", (_, data) => createMembre(data));
-
-ipcMain.handle("membre:getAll", () => getAllMembres());
-
-ipcMain.handle("membre:getById", (_, id) => getMembreById(id));
-
-ipcMain.handle("membre:update", (_, id, data) => updateMembre(id, data));
-
-ipcMain.handle("membre:delete", (_, id) => deleteMembre(id));
