@@ -2,6 +2,13 @@ export const up = function (knex) {
   return knex.schema.createTable("depenses", (table) => {
 
     table.increments("depense_id").primary();
+      
+    table
+      .integer("projet_id")
+      .unsigned()
+      .references("projet_id")
+      .inTable("projets")
+      .onDelete("CASCADE");
 
     table
       .integer("budget_id")
@@ -15,10 +22,11 @@ export const up = function (knex) {
       .unsigned()
       .references("phase_id")
       .inTable("phases")
-          .onDelete("SET NULL");
+      .onDelete("CASCADE");
       
+    table.string("titre_depense");
     table.string("description");
-    table.decimal("montant", 14, 2).notNullable();
+    table.decimal("montant", 16, 2).notNullable();
     table.date("date").notNullable();
     table.string("type").defaultTo("normal");
 
@@ -26,6 +34,8 @@ export const up = function (knex) {
 
   });
 };
+
+
 
 export const down = function (knex) {
   return knex.schema.dropTable("depenses");

@@ -6,177 +6,170 @@ import React, {
     useCallback,
     useMemo
 } from 'react';
-import { alertService } from '../functions/alertService';
+import { alertService } from '../Services/alertService';
+
 
 const BudgetsContext = createContext();
 
 export const BudgetsProvider = ({ children }) => {
 
-    const [globalBudget, setGlobalBudget] = useState([]);
-    const [categoriesBudget, setCategoriesBudget] = useState([]);
-    const [devises, setDevises] = useState([]);
+    const [budget, setBudget] = useState([]);
+    const [devise, setDevise] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeProject, setActiveProject] = useState(null);
     const [error, setError] = useState(null);
 
-    /* =========================
-       LOAD GLOBAL BUDGET
-    ========================== */
-    const loadGlobalBudget = useCallback(async () => {
+    // Charger le projet au montage
+    useEffect(() => {
+        const projet_id = localStorage.getItem("activeProjectId");
+        setActiveProject(projet_id ? Number(projet_id) : null);
+    }, []);
+
+    // Fonction de chargement avec la bonne dépendance
+    const loadBudgets = useCallback(async () => {
+        if (!activeProject) {
+            console.log("Pas de projet actif");
+            return;
+        }
+
         try {
             setLoading(true);
+            const result = await window.api.loadBudgets(activeProject);
 
-            const result = await window.api.getAllMembres();
 
-            if (result.success) {
-                setGlobalBudget(result.data || []);
-                setError(null);
+            if (result?.success) {
+                setBudget(result.data?.budget || null);
+                setDevise(result.data?.budget?.devise || "USD");
+
+
             } else {
-                throw new Error(result.error);
+                throw new Error(result?.error || "Erreur de chargement");
             }
-
         } catch (err) {
-            console.error("Erreur chargement du budget global", err);
-            setError("Impossible de charger du budget global");
-            alertService.error("Impossible de charger du budget global")
-            return { success: false, error: err.message };
+            console.error(err);
+            setBudget(null);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeProject]); // ← Ajoutez activeProject ici
 
-    /* =========================
-       INITIAL LOAD
-    ========================== */
+    // Déclencher le chargement quand activeProject change
     useEffect(() => {
-        loadGlobalBudget();
-    }, [loadGlobalBudget]);
-
+        if (activeProject) {
+            loadBudgets();
+        } else {
+            setBudget(null);
+            setLoading(false);
+        }
+    }, [activeProject]); // ← Enlevez loadBudgets des dépendances
 
     /* =========================
        CREATE GLOBAL BUDGET
     ========================== */
-    const createGlobalBudget = useCallback(async (budgetData) => {
-        try {
-            const result = await window.api.createGlobalBudget(budgetData);
+    // const createBudget = useCallback(async (budgetData) => {
 
-            if (!window.api?.createPhase) {
+    //     console.log("useDate", budgetData);
+
+    //     try {
+    //         if (!window.api?.createBudget) {
+    //             throw new Error("API Electron non disponible");
+    //         }
+    //         const result = await window.api.createBudget(budgetData);
+    //         if (!result) {
+    //             throw new Error("Aucune réponse du backend");
+    //         }
+    //         // 👇 important
+    //         if (!result.success) {
+    //             return result;
+    //         }
+
+    //         setBudget(prev => [...prev, result.data]);
+    //         alertService.success("Le budget a été ajouté avec succès !");
+    //         return { success: true, data: result.data };
+
+    //     } catch (err) {
+    //         console.error("Erreur création:", err);
+    //         return {
+    //             success: false,
+    //             error: err.message
+    //         };
+    //     }
+
+    // }, []);
+
+    const convertionBudget = useCallback(async (projet_id, budgetData) => {
+
+        console.log("useDate", budgetData);
+
+        try {
+            if (!window.api?.convertionBudget) {
                 throw new Error("API Electron non disponible");
             }
-
+            const result = await window.api.convertionBudget(projet_id, budgetData);
             if (!result) {
                 throw new Error("Aucune réponse du backend");
             }
-
+            // 👇 important
             if (!result.success) {
-                throw new Error(result.error || "Erreur inconnue");
+                return result;
             }
-            // Optimisation : on ajoute sans reload complet
-            setGlobalBudget(prev => [...prev, result.data]);
-            alertService.success(`Le budget a été ajouter avec succès !`)
+
+            setBudget(result.data);
+            setDevise(result.data.devise || "USD");
+
+
 
             return { success: true, data: result.data };
 
         } catch (err) {
             console.error("Erreur création:", err);
-            alertService.handleBackendResponse(err.message || "Erreur lors de la création")
-            return { success: false, error: err.message };
+            return {
+                success: false,
+                error: err.message
+            };
         }
+
     }, []);
 
-    // /* =========================
-    //    UPDATE PROJECT
-    // ========================== */
-    // const updateMembre = useCallback(async (membre_id, membreData) => {
-    //     try {
-    //         // 1. Vérifier l'API d'abord
-    //         if (!window.api?.updateMembre) {
-    //             throw new Error("API Electron non disponible");
-    //         }
-
-    //         // 2. Appel à l'API
-    //         const result = await window.api.updateMembre(membre_id, membreData);
-
-    //         // 3. Vérifier que result existe
-    //         if (!result) {
-    //             throw new Error("Aucune réponse du backend");
-    //         }
-
-    //         // 4. Vérifier et logger les erreurs en toute sécurité
-    //         if (result.errors) {
-    //             console.log("Erreurs complètes :", result.errors);
-    //             // Vérifier que result.errors est un tableau avant d'accéder à l'index 0
-    //             if (Array.isArray(result.errors) && result.errors.length > 0) {
-    //                 console.log("Première erreur :", result.errors[0]);
-    //                 console.log("Message :", result.errors[0]?.message);
-    //             }
-    //         }
-
-    //         // 5. Vérifier le succès
-    //         if (!result.success) {
-    //             if (result?.errors?.length) {
-    //                 return {
-    //                     success: false,
-    //                     errors: result.errors
-    //                 };
-    //             }
-    //             return {
-    //                 success: false,
-    //                 errors: [
-    //                     { field: "server", message: result.error || "Erreur inconnue" }
-    //                 ]
-    //             };
-    //         }
-
-    //         // 6. Mise à jour optimiste
-    //         setMembres(prev =>
-    //             prev.map(p => p.membre_id === membre_id ? { ...p, ...membreData } : p)
-    //         );
-
-    //         if (result.data?.nomComplet) {
-    //             alertService.success(`Le membre ${result.data.nomComplet} a été modifié avec succès !`);
-    //         } else {
-    //             alertService.success(`Le membre a été modifié avec succès !`);
-    //         }
-
-    //         return { success: true };
-
-    //     } catch (err) {
-    //         console.error("Erreur mise à jour:", err);
-
-    //         // Si err contient déjà la structure { success, errors }
-    //         if (err && typeof err === 'object' && 'errors' in err) {
-    //             return err;
-    //         }
-
-    //         // Sinon, format standard
-    //         return {
-    //             success: false,
-    //             errors: [{ field: "server", message: err.message || "Erreur serveur" }]
-    //         };
-    //     }
-    // }, [setMembres]); // N'oubliez pas les dépendances !
-
-    // // /* =========================
-    // //    DELETE MEMBRE
-    // // ========================== */
-    // const deleteMembre = useCallback(async (membre_id) => {
-    //     try {
-    //         const result = await window.api.deleteMembre(membre_id);
-    //         if (!result.success) throw new Error(result.error);
-
-    //         setMembres(prev => prev.filter(m => m.membre_id !== membre_id));
-
-    //         alertService.success(`Membre supprimé !`);
-    //         return { success: true };
-
-    //     } catch (err) {
-    //         console.error("Erreur suppression:", err);
-    //         toast.error("Erreur lors de la suppression");
-    //         return { success: false, error: err.message };
-    //     }
-    // }, []);
 
 
+    const configureBudget = useCallback(async (projet_id, budgetData) => {
+
+        console.log("useDate", budgetData);
+        console.log("projet_id", projet_id);
+
+
+        try {
+            if (!window.api?.configureBudget) {
+                throw new Error("API Electron non disponible");
+            }
+            const result = await window.api.configureBudget(projet_id, budgetData);
+            if (!result) {
+                throw new Error("Aucune réponse du backend");
+            }
+            // 👇 important
+            if (!result.success) {
+                return result;
+            }
+
+            setBudget(result.data);
+            setDevise(result.data.devise || "USD");
+
+
+
+            return { success: true, data: result.data };
+
+        } catch (err) {
+            console.error("Erreur création:", err);
+            return {
+                success: false,
+                error: err.message
+            };
+        }
+
+    }, []);
+
+  
 
 
 
@@ -184,20 +177,24 @@ export const BudgetsProvider = ({ children }) => {
        MEMOIZED CONTEXT VALUE
     ========================== */
     const value = useMemo(() => ({
-        globalBudget,
+        budget,
         loading,
         error,
-        loadGlobalBudget,
-        createGlobalBudget,
+        loadBudgets,
+        configureBudget,
+        convertionBudget,
+        setBudget
         // updateMembre,
         // deleteMembre
 
     }), [
-        globalBudget,
+        budget,
         loading,
         error,
-        loadGlobalBudget,
-        createGlobalBudget,
+        loadBudgets,
+        configureBudget,
+        convertionBudget,
+        setBudget
         // updateMembre,
         // deleteMembre
 

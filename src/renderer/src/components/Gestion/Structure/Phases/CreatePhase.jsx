@@ -1,17 +1,21 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { Close, Save, CalendarToday, Description, Title, Group, Task, PersonAdd } from "@mui/icons-material";
+import { Close, Save, CalendarToday, Description, Title, Group, Task, PersonAdd, AttachMoney, Warning } from "@mui/icons-material";
 import { usePhases } from '../../../../hooks/usePhase';
 import { useMembres } from '../../../../hooks/useMembers';
 import { motion } from "framer-motion";
 import AjouterMembre from '../../../Ressources/Equipe/AjouteMembre';
+import { styleChamps, verifieChamps, formateMontantSimple } from "../../../../Services/functions";
+import { alertService } from '../../../../Services/alertService';
 
-const ModalCreatePhase = ({ isOpen, onClose, project }) => {
+const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
     const { createPhase } = usePhases();
     const { membres, loadMembres } = useMembres();
     const [loading, setLoading] = useState(false);
     const [loadingMembres, setLoadingMembres] = useState(false);
     const [isAddMembreModalOpen, setIsAddMembreModalOpen] = useState(false); // État pour le modal d'ajout
+    const [erreurDepassement, setErreurDepassement] = useState('');
+    const [isdepassement, setIsDepassement] = useState(false);
 
     // Charger les membres quand la modale s'ouvre
     useEffect(() => {
@@ -29,7 +33,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
         register,
         control,
         handleSubmit,
-        formState: { errors },
+        formState: { errors, isDirty },
         reset,
         watch
     } = useForm({
@@ -38,6 +42,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
             description_phase: '',
             date_debut: '',
             date_fin: '',
+            budget_phase: '',
             taches: [''],
             membres: []
         }
@@ -49,6 +54,8 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
     const { fields: membreFields, append: appendMembre, remove: removeMembre } =
         useFieldArray({ control, name: 'membres' });
 
+
+
     useEffect(() => {
         if (isOpen) {
             reset({
@@ -56,37 +63,71 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                 description_phase: '',
                 date_debut: '',
                 date_fin: '',
+                budget_phase: '',
                 taches: [''],
                 membres: []
             });
+            setLoading(false);
+            setErreurDepassement("");
+            setIsDepassement(false);
         }
     }, [isOpen, reset]);
 
+    // ✅ FIX logique (plus de loading ici)
+    const depassement = (budget_phase, totalmontant, devise) => {
+        if (Number(budget_phase) > Number(totalmontant)) {
+            setIsDepassement(true);
+            setErreurDepassement(
+                `Le budget saisi ${formateMontantSimple(budget_phase)} ${devise} dépasse le budget tatal du projet
+                    ${formateMontantSimple(totalmontant)} ${devise}`
+            );
+            return true;
+        } else {
+            setIsDepassement(false);
+            setErreurDepassement('');
+            return false;
+        }
+    }
+
     const handleClose = () => {
+        setLoading(false);
         reset();
         onClose();
+
     };
 
-    const onSubmit = async (data) => {
-        setLoading(true);
+    const watchedFields = watch();
+    const style = styleChamps();
 
+    const onSubmit = async (data) => {
+
+        const result = depassement(data.budget_phase, budget.budget_total, budget.devise);
+        if (result) return;
+
+        setLoading(true);
         const membresSelectionnes = (data.membres || [])
             .map(m => m?.toString().trim())
             .filter(Boolean);
 
         const cleanedPhase = {
             ...data,
-            project_id: project.projet_id,
-            date_debut: new Date(data.date_debut).toISOString(),
-            date_fin: new Date(data.date_fin).toISOString(),
+            budget_restant: Number(data.budget_phase),
+            budget_consomme: 0,
+            status: 'encours',
+            projet_id: project.projet_id,
             taches: (data.taches || []).map(t => t.trim()).filter(Boolean),
             membres: membresSelectionnes
         };
 
-        const result = await createPhase(cleanedPhase);
 
-        if (!result.success) {
-            console.error(result.error || result.errors);
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        const response = await createPhase(cleanedPhase);
+        setBudget(response.data?.budget);
+
+        console.log("response", response);
+
+        if (!response.success) {
+            console.error(response.error || response.errors);
             setLoading(false);
             return;
         }
@@ -103,7 +144,6 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
         return membres.filter(m => m.project_id === project.projet_id);
     }, [membres, project?.projet_id]);
 
-    console.log("les membres ", membres);
 
 
     if (!isOpen) return null;
@@ -112,11 +152,11 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
-                <div className="bg-primary p-4 flex justify-between items-center ">
-                    <h2 className="text-xl text-white font-bold">Nouvelle phase</h2>
+                <div className="bg-primary p-2 flex justify-between items-center ">
+                    <h2 className="text-2xd text-white font-bold">Nouvelle phase</h2>
                     <button
                         onClick={handleClose}
-                        className="text-white hover:bg-blue p-1 rounded-full transition-colors">
+                        className="text-white hover:bg-blue-600 p-1 rounded-full transition-colors">
                         <Close />
                     </button>
                 </div>
@@ -135,10 +175,15 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                 required: 'Le titre est requis',
                                 minLength: { value: 2, message: 'Minimum 2 caractères' }
                             })}
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.title ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('title').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'title')} `}
                             placeholder="Ex: ANALYSE, CONCEPTION..."
                         />
                         {errors.title && (
@@ -158,10 +203,15 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                 minLength: { value: 10, message: 'Minimum 10 caractères' }
                             })}
                             rows="4"
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                        focus:outline-none focus:bg-white focus:border-blue-500
-                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.description_phase ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={150} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 150) {
+                                    e.target.value = e.target.value.slice(0, 150);
+                                }
+                                // mettre à jour React Hook Form
+                                register('description_phase').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'description_phase')} `}
                             placeholder="Description détaillée de la phase..."
                         />
                         {errors.description_phase && (
@@ -183,10 +233,8 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                 {...register('date_debut', {
                                     required: 'La date de début est requise'
                                 })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                            focus:outline-none focus:bg-white focus:border-blue-500
-                                            transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.date_debut ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'date_debut')} `}
                             />
                             {errors.date_debut && (
                                 <p className="text-red-500 text-sm mt-1">
@@ -208,10 +256,8 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                         !dateDebut || value >= dateDebut ||
                                         'La date de fin doit être après la date de début'
                                 })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                            focus:outline-none focus:bg-white focus:border-blue-500
-                                            transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.date_fin ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, "date_fin")} `}
                             />
                             {errors.date_fin && (
                                 <p className="text-red-500 text-sm mt-1">
@@ -234,9 +280,15 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                     <input
                                         type="text"
                                         {...register(`taches.${index}`)}
-                                        className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                focus:outline-none focus:bg-white focus:border-blue-500
-                                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        maxLength={100} // limite stricte
+                                        onChange={(e) => {
+                                            if (e.target.value.length > 100) {
+                                                e.target.value = e.target.value.slice(0, 100);
+                                            }
+                                            // mettre à jour React Hook Form
+                                            register(`taches.${index}`).onChange(e)
+                                        }}
+                                        className={`${style} ${verifieChamps(errors, watchedFields, `taches.${index}`)} `}
                                         placeholder={`Tâche ${index + 1}`}
                                     />
                                     {tacheFields.length > 1 && (
@@ -294,9 +346,8 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                                                 <div key={field.id} className="flex gap-2 items-center">
                                                     <select
                                                         {...register(`membres.${index}`)}
-                                                        className="flex-1 px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                                    transition-all duration-300"
+
+                                                        className={`${style} ${verifieChamps(errors, watchedFields, `membres.${index}`)} `}
                                                     >
                                                         <option value="">Sélectionner un membre...</option>
                                                         {membresDuProjet.map(member => (
@@ -347,6 +398,49 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
                         )}
                     </div>
 
+
+                    {/* Budget_phase */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <AttachMoney className="inline mr-2 text-blue" />
+                            Budget de la phase /
+                            <span className='text-orange-600 ml-3'>
+                                Budget du projet : {formateMontantSimple(budget.budget_total)} {budget.devise}
+                            </span>
+                        </label>
+                        <input
+                            type="number"
+                            {...register('budget_phase', {
+                                required: 'Le Budget est requis',
+                                minLength: { value: 2, message: 'Minimum 2 caractères' }
+                            })}
+                            maxLength={16} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 16) {
+                                    e.target.value = e.target.value.slice(0, 16);
+                                }
+                                // mettre à jour React Hook Form
+                                register("budget_phase").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "budget_phase")} `}
+                            placeholder="Ex: 800000"
+                        />
+                        {errors.budget_phase && (
+                            <p className="text-red-500 text-sm mt-1">{errors.budget_phase.message}</p>
+                        )}
+
+                        {isdepassement && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4  m-auto mt-3">
+                                <p className="text-2xd text-red-700 flex items-start gap-2 flex-wrap">
+                                    <Warning className="text-red-600 shrink-0" fontSize="small" />
+                                    <span className=''>
+                                        {erreurDepassement}
+                                    </span>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Boutons */}
                     <div className="flex justify-end gap-3 pt-4 border-t">
                         <button
@@ -358,7 +452,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project }) => {
 
                         <motion.button
                             type="submit"
-                            disabled={loading || Object.keys(errors).length > 0 || loadingMembres}
+                            disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'

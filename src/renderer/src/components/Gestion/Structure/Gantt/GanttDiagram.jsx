@@ -4,7 +4,7 @@ import PhaseBar from "./PhaseBar";
 import MilestoneMarker from "./MilestoneMarker";
 import DependencyArrow from "./DependencyArrow";
 import CriticalPathIndicator from "./CriticalPathIndicator";
-import { calculateCriticalPath, detectConflicts } from "../../../../functions/math";
+import { calculateCriticalPath, detectConflicts } from "../../../../Services/math";
 import useResponsiveGantt from "../../../../hooks/useResponsiveGantt";
 import { usePhases } from "../../../../hooks/usePhase";
 

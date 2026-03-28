@@ -8,7 +8,7 @@ export const up = function (knex) {
       .unsigned()
       .notNullable()
       .references("projet_id")
-      .inTable("projects")
+      .inTable("projets")
       .onDelete("CASCADE");
 
     // phase précédente

@@ -21,8 +21,7 @@
 .window-controls button {
     -webkit-app-region: no-drag;
     border: none;
-    cursor: pointer;
-    padding: 3px 5px;
+    padding: 3px 10px;
 
 }
 

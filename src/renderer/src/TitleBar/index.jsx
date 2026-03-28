@@ -7,8 +7,8 @@ const TitleBar = () => {
     return (
 
         <div className="titlebar bg-white ">
-            <img src={axis} className='w-12 ml-3' />
-            <div className="window-controls flex items-center gap-4 px-4 text-primary font-bold ">
+            <img src={axis} className='w-10 ml-3' />
+            <div className="window-controls flex items-center gap-4 text-primary font-bold ">
 
                 <button onClick={() => window.api.minimize()}>
                     <Remove fontSize='small' />

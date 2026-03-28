@@ -1,151 +1,195 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-    Close, Save, AttachMoney, Business, Savings,
-    CurrencyExchange, Warning
+    Close, Save, Business, Savings,
+    Warning
 } from "@mui/icons-material";
-import { CircularProgress } from "@mui/material";
 import { useBudgets } from '../../../hooks/useBudgets';
+import { alertService } from '../../../Services/alertService';
+import { motion } from 'framer-motion';
+import { verifieChamps, styleChamps, getDeviseNom, getDeviseSymbol, formateMontantSimple } from '../../../Services/functions';
+import { devises } from '../../../Services/listes';
 
-const ConfigBudget = ({ isOpen, onClose, phases }) => {
+const ConfigBudget = ({ isOpen, onClose, project }) => {
 
-    const { createGlobalBudget } = useBudgets();
+    const { budget, configureBudget } = useBudgets();
 
-    const [openRepartitionManuel, setOpenRepartitionManuel] = useState(false);
     const [erreurDepassement, setErreurDepassement] = useState('');
+    const [isdepassement, setIsDepassement] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [validationErrors, setValidationErrors] = useState([]);
+    const [typeConfig, setTypeConfig] = useState(true);
+    const [reserveEtat, setReserveEtat] = useState(true);
+
+    // Sécurisation budget
+    const safeBudget = useMemo(() => ({
+        budget_total: budget?.budget_total || 0,
+        reserve: budget?.reserve || 0,
+        devise: budget?.devise || '',
+        type: budget?.type || ''
+    }), [budget]);
 
     const {
         register,
         handleSubmit,
         watch,
-        setValue,
-        formState: { errors },
+        formState: { errors, isDirty },
         reset
     } = useForm({
         defaultValues: {
-            type: 'interne',
-            montant_total: 0,
-            devise: 'USD',
+            type: '',
+            montant: 0,
             reserve: 0,
-            phasesBudget: 0,
-            materielsBudget: 0,
-            campagnesBudget: 0,
         }
     });
 
-    const watchType = watch('type', 'interne');
-    const watchMontantTotal = Number(watch('montant_total') || 0);
-    const watchReserve = Number(watch('reserve') || 0);
-    const watchDevise = watch('devise', 'USD');
-    const watchPhasesBudget = Number(watch('phasesBudget') || 0);
-    const watchMaterielsBudget = Number(watch('materielsBudget') || 0);
-    const watchCampagnesBudget = Number(watch('campagnesBudget') || 0);
+    const watchType = watch('type', safeBudget.type || '');
+    const watchMontant = watch('montant', 0);
+    const watchReserve = watch('reserve', 0);
 
-    // Calcul du total des budgets
-    const totalBudgets = useMemo(() => {
-        return watchPhasesBudget + watchMaterielsBudget + watchCampagnesBudget;
-    }, [watchPhasesBudget, watchMaterielsBudget, watchCampagnesBudget]);
+    const style = styleChamps();
+    const deviseNom = getDeviseNom(safeBudget.devise, devises);
+    const deviseSymbole = getDeviseSymbol(safeBudget.devise, devises);
 
-    // Calcul montant réserve
-    const montantReserve = useMemo(() => {
-        return (watchMontantTotal * watchReserve) / 100;
-    }, [watchMontantTotal, watchReserve]);
-
-    // Montant disponible après réserve
-    const montantApresReserve = useMemo(() => {
-        return watchMontantTotal - montantReserve;
-    }, [watchMontantTotal, montantReserve]);
-
-    // Vérification dépassement
+    // Reset propre
     useEffect(() => {
-
-        if (montantApresReserve <= 0) {
-            setErreurDepassement('');
-            return;
-        }
-
-        if (totalBudgets > montantApresReserve) {
-            setErreurDepassement(
-                `Le total des budgets (${totalBudgets.toLocaleString()} ${watchDevise}) ` +
-                `dépasse le montant disponible après réserve (${montantApresReserve.toLocaleString()} ${watchDevise})`
-            );
-        } else {
-            setErreurDepassement('');
-        }
-
-    }, [totalBudgets, montantApresReserve, watchDevise]);
-
-    // Reset du formulaire à l'ouverture
-    useEffect(() => {
-
         if (isOpen) {
             reset({
-                type: 'interne',
-                montant_total: 0,
-                devise: 'USD',
+                type: safeBudget.type || '',
+                montant: 0,
                 reserve: 0,
-                phasesBudget: 0,
-                materielsBudget: 0,
-                campagnesBudget: 0,
             });
-
-            setOpenRepartitionManuel(false);
+            setIsDepassement(false);
             setErreurDepassement('');
             setLoading(false);
+            setValidationErrors([]);
+            setTypeConfig(true);
+            setReserveEtat(true);
+        }
+    }, [isOpen, safeBudget, reset]);
+
+    // Calcul centralisé
+    const calculerSimulation = (montant = 0, reserve = 0, typeCfg = true, reserveCfg = true) => {
+        let nouveauBudgetTotal = safeBudget.budget_total;
+        let nouvelleReserve = safeBudget.reserve;
+
+        if (montant > 0) {
+            nouveauBudgetTotal = typeCfg
+                ? nouveauBudgetTotal + montant
+                : nouveauBudgetTotal - montant;
         }
 
-    }, [isOpen, reset]);
+        if (reserve > 0) {
+            nouvelleReserve = reserveCfg
+                ? nouvelleReserve + reserve
+                : nouvelleReserve - reserve;
+        }
+
+        return { nouveauBudgetTotal, nouvelleReserve };
+    };
+
+    // Validation unique
+    const verifierDepassement = (montant, reserve, typeCfg, reserveCfg) => {
+        const { nouveauBudgetTotal, nouvelleReserve } =
+            calculerSimulation(montant, reserve, typeCfg, reserveCfg);
+
+        if (!typeCfg && montant > 0 && nouveauBudgetTotal < 0) {
+            setErreurDepassement(
+                `Retrait (${formateMontantSimple(montant)} ${deviseSymbole}) > budget (${formateMontantSimple(safeBudget.budget_total)} ${deviseSymbole})`
+            );
+            setIsDepassement(true);
+            return true;
+        }
+
+        if (!reserveCfg && reserve > 0 && nouvelleReserve < 0) {
+            setErreurDepassement(
+                `Retrait réserve (${formateMontantSimple(reserve)} ${deviseSymbole}) > réserve (${formateMontantSimple(safeBudget.reserve)} ${deviseSymbole})`
+            );
+            setIsDepassement(true);
+            return true;
+        }
+
+        if (nouvelleReserve > nouveauBudgetTotal) {
+            setErreurDepassement(
+                `Réserve (${formateMontantSimple(nouvelleReserve)} ${deviseSymbole}) > budget (${formateMontantSimple(nouveauBudgetTotal)} ${deviseSymbole})`
+            );
+            setIsDepassement(true);
+            return true;
+        }
+
+        setErreurDepassement('');
+        setIsDepassement(false);
+        return false;
+    };
+
+    // Simulation affichage
+    const { nouveauBudgetTotal, nouvelleReserve } = useMemo(() => {
+        return calculerSimulation(
+            Number(watchMontant) || 0,
+            Number(watchReserve) || 0,
+            typeConfig,
+            reserveEtat
+        );
+    }, [watchMontant, watchReserve, typeConfig, reserveEtat, safeBudget]);
 
     const onSubmit = async (data) => {
 
-        if (loading) return;
-
-        if (totalBudgets > montantApresReserve) {
-            alert(`Erreur : ${erreurDepassement}`);
+        if (!isDirty) {
+            alertService.info("Aucune modification détectée");
+            setLoading(false);
             return;
         }
 
-        if (totalBudgets > watchMontantTotal) {
-            alert("Le total des budgets ne peut pas dépasser le montant total");
+        const montant = Number(data.montant) || 0;
+        const reserve = Number(data.reserve) || 0;
+
+
+
+        if (verifierDepassement(montant, reserve, typeConfig, reserveEtat)) {
             return;
         }
+
+        setLoading(true);
 
         try {
+            await new Promise(resolve => setTimeout(resolve, 3000))
+            const response = await configureBudget(project?.projet_id, {
+                type: data.type,
+                montant,
+                reserve,
+                typeConfig,
+                reserveEtat
+            });
 
-            setLoading(true);
+            if (!response?.success) {
+                const message =
+                    response?.errors?.map(e => `${e.field}: ${e.message}`).join('\n') ||
+                    response?.message ||
+                    "Erreur lors de la configuration";
 
-            const budgetConfig = {
-                ...data,
-                montant_total: Number(data.montant_total),
-                phasesBudget: Number(data.phasesBudget),
-                materielsBudget: Number(data.materielsBudget),
-                campagnesBudget: Number(data.campagnesBudget),
-                reserve: Number(data.reserve)
-            };
-
-            const result = await createGlobalBudget(budgetConfig);
-
-            console.log(result);
-
-            if (!result || !result.success) {
-
-                console.error(result?.error || result?.errors || "Erreur inconnue");
-                setLoading(false);
+                alertService.error(message);
+                setValidationErrors(response?.errors || []);
                 return;
-
             }
 
-            setLoading(false);
-            onClose();
+            alertService.success("Budget configuré avec succès");
+            handleClose();
 
         } catch (error) {
-
-            console.error("Erreur inattendue:", error);
+            alertService.error(error.message || "Erreur");
+        } finally {
             setLoading(false);
-
         }
+    };
 
+    const handleClose = () => {
+        reset();
+        setValidationErrors([]);
+        setIsDepassement(false);
+        setErreurDepassement('');
+        setTypeConfig(true);
+        setReserveEtat(true);
+        onClose();
     };
 
     if (!isOpen) return null;
@@ -154,8 +198,8 @@ const ConfigBudget = ({ isOpen, onClose, phases }) => {
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex justify-between items-center sticky top-0">
-                    <h2 className="text-xl text-white font-bold">
+                <div className="bg-primary p-3 flex justify-between items-center sticky top-0">
+                    <h2 className="text-2xd text-white font-bold">
                         Configuration du budget
                     </h2>
                     <button
@@ -167,7 +211,22 @@ const ConfigBudget = ({ isOpen, onClose, phases }) => {
                     </button>
                 </div>
 
+                {isdepassement && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 w-120 m-auto mt-3">
+                        <p className="text-2xd text-red-700 flex items-start gap-2">
+                            <Warning className="text-red-600 shrink-0" fontSize="small" />
+                            <span>{erreurDepassement}</span>
+                        </p>
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+
+                    <div className='flex items-start border-b-2 border-blue-600 pb-3 text-lg'>
+                        <span className='flex items-center gap-3 font-bold text-primary'>
+                            Budget du Projet actuel : <span>{formateMontantSimple(safeBudget.budget_total)} {safeBudget.devise}</span>
+                        </span>
+                    </div>
 
                     {/* Type financement */}
                     <div>
@@ -214,281 +273,200 @@ const ConfigBudget = ({ isOpen, onClose, phases }) => {
                                 </div>
                             </label>
                         </div>
-
                         {errors.type && (
                             <p className="text-red-500 text-sm mt-1">{errors.type.message}</p>
                         )}
                     </div>
 
                     {/* Montant + devise */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+                    <div className="flex flex-col gap-4 w-full mt-8">
+                        <div className='flex items-start gap-4'>
+                            <div className='flex gap-1 text-blue-600 font-medium'>
+                                <input
+                                    type="radio"
+                                    className='bg-blue-600 choix1'
+                                    name='choix'
+                                    checked={typeConfig === true}
+                                    onChange={(e) => setTypeConfig(true)}
+                                />
+                                <span>+ ajouter du budget</span>
+                            </div>
+
+                            <div className='flex gap-1 text-blue-600 font-medium'>
+                                <input
+                                    type="radio"
+                                    name="choix"
+                                    className='bg-black text-black choix1'
+                                    checked={typeConfig === false}
+                                    onChange={(e) => setTypeConfig(false)}
+                                />
+                                <span>- retirer du budget</span>
+                            </div>
+                        </div>
+
+                        <div className='w-full'>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <AttachMoney className="inline mr-2 text-blue-600" />
-                                Montant total
+                                Entrez le Montant (facultatif)
                             </label>
                             <input
                                 type="number"
-                                step="0.01"
                                 min="0"
-                                {...register('montant_total', {
-                                    required: 'Le montant est requis',
+                                step="0.01"
+                                {...register('montant', {
                                     min: { value: 0, message: 'Le montant doit être positif' },
-                                    valueAsNumber: true
+                                    validate: value => {
+                                        const montant = Number(value) || 0;
+                                        if (!typeConfig && montant > 0 && montant > safeBudget.budget_total) {
+                                            return `Le montant à retirer ne peut pas dépasser ${formateMontantSimple(safeBudget.budget_total)} ${deviseSymbole}`;
+                                        }
+                                        if (typeConfig && montant > 0) {
+                                            const { nouveauBudgetTotal } = calculerSimulation(montant, 0, true, reserveEtat);
+                                            if (nouveauBudgetTotal < 0) {
+                                                return `Opération non valide`;
+                                            }
+                                        }
+                                        return true;
+                                    }
                                 })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300 ${errors.montant_total ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                                maxLength={16}
+                                onChange={(e) => {
+                                    if (e.target.value.length > 16) {
+                                        e.target.value = e.target.value.slice(0, 16);
+                                    }
+                                    register('montant').onChange(e);
+                                }}
+                                className={`${style} ${verifieChamps(errors, watch, 'montant')}`}
                             />
-                            {errors.montant_total && (
-                                <p className="text-red-500 text-sm mt-1">{errors.montant_total.message}</p>
+                            {errors.montant && (
+                                <p className="text-red-500 text-sm mt-1">{errors.montant.message}</p>
+                            )}
+                            {watchMontant > 0 && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                    {typeConfig ? 'Nouveau budget total :' : 'Budget après retrait :'} {' '}
+                                    <span className="font-semibold text-blue-600">
+                                        {formateMontantSimple(nouveauBudgetTotal)} {deviseSymbole}
+                                    </span>
+                                </p>
                             )}
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <CurrencyExchange className="inline mr-2 text-blue-600" />
-                                Devise
-                            </label>
-                            <select
-                                {...register('devise')}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300"
-                            >
-                                <option value="XOF">FCFA (XOF)</option>
-                                <option value="EUR">Euro (€)</option>
-                                <option value="USD">Dollar ($)</option>
-                                <option value="GBP">Livre (£)</option>
-                                <option value="CDF">Franc Congolais (CDF)</option>
-                            </select>
-                        </div>
                     </div>
 
-                    {/* Répartition du budget */}
-                    <div>
-                        <div className='flex justify-between items-center mb-4'>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Répartition du budget
-                            </label>
+                    {/* Réserve */}
+                    <div className="flex flex-col gap-3 pt-4 w-full">
+                        <div className='text-2xd text-black font-medium border-b-2 border-black pb-3'>
+                            <span>Budget de réserve actuel : {formateMontantSimple(safeBudget.reserve)} {safeBudget.devise}</span>
+                        </div>
 
-                            <div className="text-sm bg-gray-100 p-2 rounded-lg">
-                                <span className="text-gray-600">Total alloué : </span>
-                                <span className={`font-semibold ${totalBudgets > montantApresReserve
-                                    ? 'text-red-600'
-                                    : 'text-green-600'
-                                    }`}>
-                                    {(totalBudgets || 0).toLocaleString()} {watchDevise}
-                                </span>
-                                <span className="text-gray-400 mx-2">/</span>
-                                <span className="font-semibold text-gray-700">
-                                    {(montantApresReserve || 0).toLocaleString()} {watchDevise}
-                                </span>
+                        <div className='flex items-start gap-4'>
+                            <div className='flex gap-1 text-black font-medium'>
+                                <input
+                                    type="radio"
+                                    className='bg-blue-600'
+                                    name='choixReserve'
+                                    checked={reserveEtat === true}
+                                    onChange={(e) => setReserveEtat(true)}
+                                />
+                                <span>+ ajouter</span>
+                            </div>
+
+                            <div className='flex gap-1 text-black font-medium'>
+                                <input
+                                    type="radio"
+                                    name="choixReserve"
+                                    className='bg-black text-black'
+                                    checked={reserveEtat === false}
+                                    onChange={(e) => setReserveEtat(false)}
+                                />
+                                <span>- retirer</span>
                             </div>
                         </div>
 
-                        {erreurDepassement && (
-                            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
-                                <Warning className="text-red-500 mt-0.5" />
-                                <div>
-                                    <p className="text-red-700 font-medium">Budget dépassé</p>
-                                    <p className="text-sm text-red-600">{erreurDepassement}</p>
-                                </div>
-                            </div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Montant réservé (facultatif)
+                        </label>
+
+                        <input
+                            {...register('reserve', {
+                                min: { value: 0, message: 'Le montant doit être positif' },
+                                validate: value => {
+                                    const reserve = Number(value) || 0;
+                                    if (!reserveEtat && reserve > 0 && reserve > safeBudget.reserve) {
+                                        return `Le montant à retirer de la réserve ne peut pas dépasser ${formateMontantSimple(safeBudget.reserve)} ${deviseSymbole}`;
+                                    }
+                                    if (reserveEtat && reserve > 0) {
+                                        const { nouveauBudgetTotal, nouvelleReserve } = calculerSimulation(
+                                            watchMontant || 0,
+                                            reserve,
+                                            typeConfig,
+                                            true
+                                        );
+                                        if (nouvelleReserve > nouveauBudgetTotal) {
+                                            return `La nouvelle réserve ne peut pas dépasser le budget total (${formateMontantSimple(nouveauBudgetTotal)} ${deviseSymbole})`;
+                                        }
+                                    }
+                                    return true;
+                                }
+                            })}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Montant réserve"
+                            maxLength={16}
+                            onChange={(e) => {
+                                if (e.target.value.length > 16) {
+                                    e.target.value = e.target.value.slice(0, 16);
+                                }
+                                register('reserve').onChange(e);
+                            }}
+                            className={`${style} ${verifieChamps(errors, watch, 'reserve')}`}
+                        />
+
+                        {errors.reserve && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {errors.reserve.message}
+                            </p>
                         )}
 
-                        <div className="space-y-4 rounded-lg p-4 bg-gray-50">
-
-                            {/* Phases */}
-                            <div className="flex items-center gap-3">
-                                <label className="inline-flex items-center gap-2 w-32 font-bold text-gray-700">
-                                    Phases
-                                </label>
-                                <div className='flex-1'>
-                                    <input
-                                        {...register('phasesBudget', {
-                                            required: 'Le budget pour les phases est requis',
-                                            min: { value: 0, message: 'Le montant doit être positif' },
-                                            valueAsNumber: true
-                                        })}
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder='Montant'
-                                        className={`w-full px-5 py-3 bg-white border-2 rounded-xl 
-                        focus:outline-none focus:border-blue-500
-                        transition-all duration-300 ${errors.phasesBudget ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                    />
-                                    {errors.phasesBudget && (
-                                        <p className="text-red-500 text-sm mt-1">
-                                            {errors.phasesBudget.message}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Matériels */}
-                            <div className="flex items-center gap-3">
-                                <label className="inline-flex items-center gap-2 w-32 font-bold text-gray-700">
-                                    Matériels
-                                </label>
-                                <div className='flex-1'>
-                                    <input
-                                        {...register('materielsBudget', {
-                                            required: 'Le budget pour les matériels est requis',
-                                            min: { value: 0, message: 'Le montant doit être positif' },
-                                            valueAsNumber: true
-                                        })}
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder='Montant'
-                                        className={`w-full px-5 py-3 bg-white border-2 rounded-xl 
-                        focus:outline-none focus:border-blue-500
-                        transition-all duration-300 ${errors.materielsBudget ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                    />
-                                    {errors.materielsBudget && (
-                                        <p className="text-red-500 text-sm mt-1">
-                                            {errors.materielsBudget.message}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Campagnes */}
-                            <div className="flex items-center gap-3">
-                                <label className="inline-flex items-center gap-2 w-32 font-bold text-gray-700">
-                                    Campagnes
-                                </label>
-                                <div className='flex-1'>
-                                    <input
-                                        {...register('campagnesBudget', {
-                                            required: 'Le budget pour les campagnes est requis',
-                                            min: { value: 0, message: 'Le montant doit être positif' },
-                                            valueAsNumber: true
-                                        })}
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder='Montant'
-                                        className={`w-full px-5 py-3 bg-white border-2 rounded-xl 
-                        focus:outline-none focus:border-blue-500
-                        transition-all duration-300 ${errors.campagnesBudget ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                    />
-                                    {errors.campagnesBudget && (
-                                        <p className="text-red-500 text-sm mt-1">
-                                            {errors.campagnesBudget.message}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Réserve (%) */}
-                            <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                                <label className="inline-flex items-center gap-2 w-32 font-bold text-gray-700">
-                                    Réserve (%)
-                                </label>
-                                <div className='flex-1'>
-                                    <input
-                                        {...register('reserve', {
-                                            required: 'Le pourcentage de réserve est requis',
-                                            min: { value: 0, message: 'La réserve doit être au moins 0%' },
-                                            max: { value: 100, message: 'La réserve ne peut pas dépasser 100%' },
-                                            valueAsNumber: true
-                                        })}
-                                        type="number"
-                                        step="1"
-                                        min="0"
-                                        max="100"
-                                        placeholder='Pourcentage'
-                                        className={`w-full px-5 py-3 bg-white border-2 rounded-xl 
-                        focus:outline-none focus:border-blue-500
-                        transition-all duration-300 ${errors.reserve ? 'border-red-500' : 'border-gray-300'
-                                            }`}
-                                    />
-
-                                    {errors.reserve && (
-                                        <p className="text-red-500 text-sm mt-1">
-                                            {errors.reserve.message}
-                                        </p>
-                                    )}
-
-                                    {watchReserve > 0 && watchMontantTotal > 0 && (
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Montant réservé : {((watchMontantTotal * watchReserve) / 100).toLocaleString()} {watchDevise}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                        </div>
-
-                        {/* Barre de progression */}
-                        {montantApresReserve > 0 && (
-                            <div className="mt-4">
-
-                                {(() => {
-                                    const percent = montantApresReserve
-                                        ? Math.min(100, (totalBudgets / montantApresReserve) * 100)
-                                        : 0;
-
-                                    return (
-                                        <>
-                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                <span>0</span>
-                                                <span>{Math.round(percent)}% utilisé</span>
-                                                <span>{montantApresReserve.toLocaleString()} {watchDevise}</span>
-                                            </div>
-
-                                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                                <div
-                                                    className={`h-2.5 rounded-full transition-all duration-300 ${totalBudgets > montantApresReserve
-                                                        ? 'bg-red-600'
-                                                        : totalBudgets > montantApresReserve * 0.9
-                                                            ? 'bg-yellow-500'
-                                                            : 'bg-green-500'
-                                                        }`}
-                                                    style={{
-                                                        width: `${percent}%`
-                                                    }}
-                                                />
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-
-                            </div>
+                        {watchReserve > 0 && (
+                            <p className="text-sm text-gray-600 mt-1">
+                                {reserveEtat ? 'Nouvelle réserve :' : 'Réserve après retrait :'} {' '}
+                                <span className="font-semibold text-blue-600">
+                                    {formateMontantSimple(nouvelleReserve)} {deviseSymbole}
+                                </span>
+                            </p>
                         )}
                     </div>
 
-                    <div className="flex justify-end gap-3 border-t pt-4">
+                    <div className="flex justify-end gap-3 border-t pt-4 mt-10">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                             Annuler
                         </button>
 
-                        {loading ? (<CircularProgress />) : null}
-
-                        <button
+                        <motion.button
                             type="submit"
-                            disabled={totalBudgets > montantApresReserve || loading}
-                            className={`px-6 py-2 rounded-lg transition-colors flex items-center gap-2 ${totalBudgets > montantApresReserve
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                }`}
+                            disabled={loading || Object.keys(errors).length > 0}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
                         >
-                            {loading
-                                ? (<><CircularProgress size={18} /> Enregistrer</>)
-                                : (<><Save /> Enregistrer</>)
-                            }
-                        </button>
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Enregistrement en cours ...
+                                </>
+                            ) : (
+                                <>
+                                    <Save /> Enregistrer
+                                </>
+                            )}
+                        </motion.button>
                     </div>
 
                 </form>

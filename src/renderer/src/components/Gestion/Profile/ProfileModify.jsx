@@ -12,13 +12,14 @@ import {
     AccessTime,
 
 } from '@mui/icons-material';
-import { typesProjets, availableProspects } from '../../../functions/listes';
+import { typesProjets, availableProspects } from '../../../Services/listes';
 import { useProjects } from '../../../hooks/useProjets';
-import { alertService } from '../../../functions/alertService';
+import { alertService } from '../../../Services/alertService';
 import { motion, AnimatePresence } from 'framer-motion'
+import { verifieChamps, styleChamps } from '../../../Services/functions';
 
 const ProfileModify = ({ isOpen, onClose, project }) => {
-    const { register, handleSubmit, formState: { errors }, reset, setValue, setError } = useForm();
+    const { register, handleSubmit, formState: { errors, isDirty }, reset, setValue, setError, watch, clearErrors } = useForm();
     const { updateProject } = useProjects();
     const [loading, setLoading] = useState(false)
 
@@ -26,7 +27,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
 
     // État local pour les prospects sélectionnés
     const [selectedProspects, setSelectedProspects] = useState([]);
-
+    const watchedFields = watch()
 
     useEffect(() => {
         if (project) {
@@ -94,7 +95,18 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
         }
     };
 
+    const style = styleChamps();
+
+
+
     const onSubmit = async (data) => {
+
+        if (!isDirty) {
+            alertService.info("Aucune modification détectée");
+            setLoading(false);
+            return;
+        }
+
         setLoading(true)
         // Convertir les dates au format ISO
         const formattedData = {
@@ -128,8 +140,16 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
         }
 
 
-
     };
+
+    const handlerClose = () => {
+        setLoading(false);
+        clearErrors();
+        onClose();
+    };
+
+
+
 
     if (!isOpen) return null;
 
@@ -137,10 +157,10 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="bg-primary p-3 flex justify-between items-center sticky top-0">
-                    <h2 className="text-lg text-white font-bold">Modifier le projet</h2>
+                <div className="bg-primary p-2 flex justify-between items-center sticky top-0">
+                    <h2 className="text-2xd text-white font-bold">Modifier le projet</h2>
                     <button
-                        onClick={onClose}
+                        onClick={handlerClose}
                         className="text-white hover:bg-blue-700 p-1 rounded-full transition-colors">
                         <Close />
                     </button>
@@ -156,13 +176,18 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                 Nom du projet
                             </label>
                             <input
+
                                 type="text"
                                 {...register('nom_projet', { required: 'Le nom du projet est requis' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
-                            ${errors.nom_projet ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                                maxLength={80} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 80) {
+                                        e.target.value = e.target.value.slice(0, 80);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('nom_projet').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'nom_projet')} `}
                             />
                             {errors.nom_projet && (
                                 <p className="text-red-500 text-sm mt-1">{errors.nom_projet.message}</p>
@@ -177,10 +202,15 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             <input
                                 type="text"
                                 {...register('chef_projet', { required: 'Le chef de projet est requis' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.chef_projet ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+                                maxLength={80} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 80) {
+                                        e.target.value = e.target.value.slice(0, 80);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('nom_projet').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'chef_projet')}`}
                             />
                             {errors.chef_projet && (
                                 <p className="text-red-500 text-sm mt-1">{errors.chef_projet.message}</p>
@@ -200,12 +230,9 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             <input
                                 type="date"
                                 {...register('date_debut', { required: 'La date de  début est requise' })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'date_debut')}`}
 
                             />
-
                             {errors.date_debut && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date_debut.message}</p>
                             )}
@@ -219,9 +246,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             <input
                                 type="date"
                                 {...register('date_fin', { required: 'La date de fin est requise' })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'date_fin')}`}
                             />
                             {errors.date_fin && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date_fin.message}</p>
@@ -240,10 +265,15 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                         <textarea
                             {...register('description', { required: 'La description est requise' })}
                             rows="4"
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.description ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={500} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 500);
+                                }
+                                // mettre à jour React Hook Form
+                                register('nom_projet').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'description')}`}
                         />
                         {errors.description && (
                             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
@@ -260,9 +290,15 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             <textarea
                                 {...register('objectif_court_terme', { required: 'champs requis' })}
                                 rows="3"
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_court_terme')}`}
+                                maxLength={250} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 250) {
+                                        e.target.value = e.target.value.slice(0, 250);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('nom_projet').onChange(e)
+                                }}
                                 placeholder="Description de l'objectif à court terme..."
                             />
                             {errors.objectif_court_terme && (
@@ -275,9 +311,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                     <input
                                         type="date"
                                         {...register('objectif_court_terme_debut', { required: 'date requise' })}
-                                        className="w-full px-5 py-2 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_court_terme_debut')}`}
                                     />
                                     {errors.objectif_court_terme_debut && (
                                         <p className="text-red-500 text-sm mt-1">{errors.objectif_court_terme_debut.message}</p>
@@ -288,9 +322,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                     <input
                                         type="date"
                                         {...register('objectif_court_terme_fin', { required: 'date requise' })}
-                                        className="w-full px-5 py-2 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_court_terme_fin')}`}
                                     />
                                     {errors.objectif_court_terme_fin && (
                                         <p className="text-red-500 text-sm mt-1">
@@ -309,9 +341,15 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             <textarea
                                 {...register('objectif_long_terme', { required: 'champs requis' })}
                                 rows="3"
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_long_terme')}`}
+                                maxLength={250} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 250) {
+                                        e.target.value = e.target.value.slice(0, 250);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('nom_projet').onChange(e)
+                                }}
                                 placeholder="Description de l'objectif à long terme..."
                             />
                             {errors.objectif_long_terme && (
@@ -325,9 +363,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                     <input
                                         type="date"
                                         {...register('objectif_long_terme_debut', { required: 'date requise' })}
-                                        className="w-full px-5 py-2 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_long_terme_debut')}`}
                                     />
                                     {errors.objectif_long_terme_debut && (
                                         <p className="text-red-500 text-sm mt-1">{errors.objectif_long_terme_debut.message}</p>
@@ -339,9 +375,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                     <input
                                         type="date"
                                         {...register('objectif_long_terme_fin', { required: 'date requise' })}
-                                        className="w-full px-5 py-2 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className={`${style} ${verifieChamps(errors, watchedFields, 'objectif_long_terme_fin')}`}
                                     />
                                     {errors.objectif_long_terme_fin && (
                                         <p className="text-red-500 text-sm mt-1">{errors.objectif_long_terme_fin.message}</p>
@@ -372,7 +406,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                     <label
                                         key={`${prospect}-${index}`}
                                         className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${selectedProspects.includes(prospect)
-                                            ? 'bg-red-50 border border-red-200'
+                                            ? 'bg-green-50 border border-green-200'
                                             : 'bg-white border border-gray-200 hover:bg-gray-50'
                                             }`}>
                                         <input
@@ -382,7 +416,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                             className="hidden"
                                         />
                                         <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${selectedProspects.includes(prospect)
-                                            ? 'bg-red-600 text-white'
+                                            ? 'bg-green-600 text-white'
                                             : 'bg-white border-2 border-gray-300'
                                             }`}>
                                             {selectedProspects.includes(prospect) && (
@@ -390,7 +424,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                                             )}
                                         </div>
                                         <span className={`text-sm ${selectedProspects.includes(prospect)
-                                            ? 'font-medium text-red-700'
+                                            ? 'font-medium text-green-700'
                                             : 'text-gray-700'
                                             }`}>
                                             {prospect}
@@ -415,9 +449,9 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
 
                             <select
                                 {...register('type_projet', { required: 'champs requise' })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                value={typesProjets[0]}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'type_projet')} `}>
+
                                 {typesProjets.map((type, index) => (
                                     <option key={index} value={type}>{type}</option>
                                 ))}
@@ -434,9 +468,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             </label>
                             <select
                                 {...register('status', { required: 'champs requise' })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                           focus:outline-none focus:bg-white focus:border-blue-500
-                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'status')} `}>
                                 <option value="planification">Planification</option>
                                 <option value="termine">Terminé</option>
                                 <option value="en_pause">En pause</option>

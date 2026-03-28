@@ -5,17 +5,14 @@ import { jalonSchema , normalizeData } from "../database/schemas/jalonSchema.js"
 
 export async function createJalon(jalonData) {
   
-
   try {
     
     const cleaned = normalizeData(jalonData);
-
     const { error, value } = jalonSchema.validate(cleaned, {
       abortEarly: false
     });
   
     
-
     if (error) {
       return {
         success: false,

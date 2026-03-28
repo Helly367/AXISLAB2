@@ -6,7 +6,7 @@ import React, {
     useCallback,
     useMemo
 } from 'react';
-import { alertService } from '../functions/alertService';
+import { alertService } from '../Services/alertService';
 
 const MembresContext = createContext();
 
@@ -15,22 +15,45 @@ export const MembresProvider = ({ children }) => {
     const [membres, setMembres] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeProject, setActiveProject] = useState(null);
+
+
+    // Charger le projet au montage
+    useEffect(() => {
+        const projet_id = localStorage.getItem("activeProjectId");
+        setActiveProject(projet_id ? Number(projet_id) : null);
+    }, []);
+
+    console.log(activeProject);
+
+
 
     /* =========================
        LOAD PROJECTS
     ========================== */
     const loadMembres = useCallback(async () => {
+
+        if (!activeProject) {
+            console.log("Pas de projet actif");
+            return;
+        }
+
         try {
             setLoading(true);
 
-            const result = await window.api.getAllMembres();
+            const result = await window.api.getAllMembres(activeProject);
 
             if (result.success) {
                 setMembres(result.data || []);
                 setError(null);
+
             } else {
                 throw new Error(result.error);
             }
+
+
+
+
 
         } catch (err) {
             console.error("Erreur chargement des Membres:", err);
@@ -40,14 +63,22 @@ export const MembresProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [activeProject]);
 
     /* =========================
        INITIAL LOAD
     ========================== */
+
+
+
     useEffect(() => {
-        loadMembres();
-    }, [loadMembres]);
+        if (activeProject) {
+            loadMembres();
+        } else {
+            setMembres(null);
+            setLoading(false);
+        }
+    }, [activeProject]);
 
 
     /* =========================
@@ -56,6 +87,8 @@ export const MembresProvider = ({ children }) => {
     const createMembre = useCallback(async (membreData) => {
         try {
             const result = await window.api.createMembre(membreData);
+            console.log(result);
+
 
             if (!window.api?.createPhase) {
                 throw new Error("API Electron non disponible");
@@ -84,7 +117,7 @@ export const MembresProvider = ({ children }) => {
     /* =========================
        UPDATE PROJECT
     ========================== */
-    const updateMembre = useCallback(async (membre_id, membreData) => {
+    const updateMembre = useCallback(async (projet_id, membreData) => {
         try {
             // 1. Vérifier l'API d'abord
             if (!window.api?.updateMembre) {
@@ -92,7 +125,11 @@ export const MembresProvider = ({ children }) => {
             }
 
             // 2. Appel à l'API
-            const result = await window.api.updateMembre(membre_id, membreData);
+            const result = await window.api.updateMembre(projet_id, membreData);
+            console.log("result", result);
+
+
+
 
             // 3. Vérifier que result existe
             if (!result) {
@@ -125,9 +162,12 @@ export const MembresProvider = ({ children }) => {
                 };
             }
 
+            const membre_id = membreData.membre_id;
+            const newMembre = result.data;
+
             // 6. Mise à jour optimiste
             setMembres(prev =>
-                prev.map(p => p.membre_id === membre_id ? { ...p, ...membreData } : p)
+                prev.map(p => p.membre_id === membre_id ? { ...p, ...newMembre } : p)
             );
 
             if (result.data?.nomComplet) {
@@ -157,19 +197,26 @@ export const MembresProvider = ({ children }) => {
     // /* =========================
     //    DELETE MEMBRE
     // ========================== */
-    const deleteMembre = useCallback(async (membre_id) => {
+    const deleteMembre = useCallback(async (projet_id, membre_id) => {
+        console.log("membre_id", membre_id);
+        console.log("projet_id", projet_id);
+
         try {
-            const result = await window.api.deleteMembre(membre_id);
+
+            const result = await window.api.deleteMembre(projet_id, membre_id);
+            console.log("result", result);
             if (!result.success) throw new Error(result.error);
 
-            setMembres(prev => prev.filter(m => m.membre_id !== membre_id));
-
+            setMembres(prev => prev.filter(m => m.membre_id !== result.data.membre_id));
             alertService.success(`Membre supprimé !`);
-            return { success: true };
+            return {
+                success: true,
+                data: result.data.membres
+            };
 
         } catch (err) {
             console.error("Erreur suppression:", err);
-            toast.error("Erreur lors de la suppression");
+            alertService.error("Erreur lors de la suppression");
             return { success: false, error: err.message };
         }
     }, []);
@@ -183,6 +230,7 @@ export const MembresProvider = ({ children }) => {
     ========================== */
     const value = useMemo(() => ({
         membres,
+        setMembres,
         loading,
         error,
         loadMembres,
@@ -192,6 +240,7 @@ export const MembresProvider = ({ children }) => {
 
     }), [
         membres,
+        setMembres,
         loading,
         error,
         loadMembres,
@@ -211,7 +260,7 @@ export const MembresProvider = ({ children }) => {
 export const useMembres = () => {
     const context = useContext(MembresContext);
     if (!context) {
-        throw new Error("useProjects doit être utilisé dans un MembreProvider");
+        throw new Error("useMembres doit être utilisé dans un MembreProvider");
     }
     return context;
 };

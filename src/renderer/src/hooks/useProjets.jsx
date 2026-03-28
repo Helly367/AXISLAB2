@@ -6,13 +6,14 @@ import React, {
     useCallback,
     useMemo
 } from 'react';
-import { alertService } from '../functions/alertService';
+import { alertService } from '../Services/alertService';
 
 const ProjectsContext = createContext();
 
 export const ProjectsProvider = ({ children }) => {
 
     const [projects, setProjects] = useState([]);
+    const [project_id, setProjet_id] = useState(null);
     const [activeProject, setActiveProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -36,7 +37,7 @@ export const ProjectsProvider = ({ children }) => {
         } catch (err) {
             console.error("Erreur chargement projets:", err);
             setError("Impossible de charger les projets");
-            toast.error("Impossible de charger les projets");
+            alertService.error("Impossible de charger les projets");
         } finally {
             setLoading(false);
         }
@@ -59,7 +60,10 @@ export const ProjectsProvider = ({ children }) => {
         if (!savedId) return;
 
         const found = projects.find(p => p.projet_id === Number(savedId));
-        if (found) setActiveProject(found);
+        if (found) {
+            setActiveProject(found);
+            setProjet_id(found)
+        }
 
     }, [projects]);
 
@@ -73,8 +77,9 @@ export const ProjectsProvider = ({ children }) => {
             if (!result.success) throw new Error(result.error);
 
             // Optimisation : on ajoute sans reload complet
-            setProjects(prev => [...prev, result.data]);
-            setActiveProject(result.data);
+
+            setProjects(prev => [...prev, result.data.newProject]);
+            setActiveProject(result.data.newProject);
 
             localStorage.setItem("activeProjectId", result.data.projet_id);
             alertService.success("Projet créé avec succès !")
@@ -143,11 +148,13 @@ export const ProjectsProvider = ({ children }) => {
     const selectActiveProject = useCallback((project) => {
         if (!project) {
             setActiveProject(null);
+            setProjet_id(null)
             localStorage.removeItem("activeProjectId");
             return;
         }
 
         setActiveProject(project);
+        setProjet_id(project.projet_id)
         localStorage.setItem("activeProjectId", project.projet_id);
     }, []);
 
@@ -174,6 +181,7 @@ export const ProjectsProvider = ({ children }) => {
     ========================== */
     const value = useMemo(() => ({
         projects,
+        project_id,
         activeProject,
         loading,
         error,
@@ -187,6 +195,7 @@ export const ProjectsProvider = ({ children }) => {
         getProjectsCount
     }), [
         projects,
+        project_id,
         activeProject,
         loading,
         error,

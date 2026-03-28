@@ -4,7 +4,8 @@ import { Close, Save, Person, Work, Email, School, Wc, Phone } from "@mui/icons-
 import WarningContent from '../../widjets/WarningContent';
 import { motion } from 'framer-motion';
 import { useMembres } from '../../../hooks/useMembers';
-import { alertService } from '../../../functions/alertService'; // Si vous avez un service d'alert
+import { alertService } from '../../../Services/alertService'; // Si vous avez un service d'alert
+import { styleChamps, verifieChamps } from '../../../Services/functions';
 
 
 const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
@@ -12,7 +13,7 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
     const { updateMembre } = useMembres();
     const [validationErrors, setValidationErrors] = useState([]);
 
-    const { register, control, handleSubmit, formState: { errors }, reset, watch } = useForm({
+    const { register, control, handleSubmit, formState: { errors, isDirty }, reset, watch } = useForm({
         defaultValues: {
             nomComplet: '',
             poste: '',
@@ -33,7 +34,6 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
     // Reset form quand memberToEdit change
     useEffect(() => {
         if (memberToEdit) {
-            console.log("Member to edit:", memberToEdit);
 
             reset({
                 nomComplet: memberToEdit.nomComplet || '',
@@ -50,7 +50,14 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
         }
     }, [memberToEdit, reset]);
 
+    const watchedFields = watch();
+    const style = styleChamps();
+
     const onSubmit = async (data) => {
+
+        if (!isDirty) {
+            alertService.info("Aucune modification detectee");
+        }
         setLoading(true);
         setValidationErrors([]);
 
@@ -67,12 +74,10 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                 competences: (data.competences || [])
                     .map(m => m?.trim())
                     .filter(Boolean),
-                project_id: project.projet_id // Assurer que le project_id est inclus
+                membre_id: memberToEdit.membre_id
             };
 
 
-            console.log("Données à envoyer:", updatedMember);
-            console.log("ID du membre:", memberToEdit?.membre_id);
 
             if (!memberToEdit?.membre_id) {
                 throw new Error("ID du membre manquant");
@@ -80,8 +85,9 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
 
             // Simuler un délai (à enlever en production)
             await new Promise(resolve => setTimeout(resolve, 1000));
+            const result = await updateMembre(project.projet_id, updatedMember);
+            console.log(result);
 
-            const result = await updateMembre(memberToEdit.membre_id, updatedMember);
 
 
             if (!result || !result.success) {
@@ -139,8 +145,8 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                 <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
                     {/* Header */}
-                    <div className="bg-primary p-4 flex justify-between items-center sticky top-0">
-                        <h2 className="text-xl text-white font-bold">
+                    <div className="bg-primary p-2 flex justify-between items-center sticky top-0">
+                        <h2 className="text-2xd text-white font-bold">
                             Modifier le membre
                         </h2>
                         <button
@@ -180,9 +186,15 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                     required: 'Le nom est requis',
                                     minLength: { value: 2, message: 'Minimum 2 caractères' }
                                 })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                maxLength={80} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 80) {
+                                        e.target.value = e.target.value.slice(0, 80);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('nomComplet').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'nomComplet')} `}
                             />
 
                             {errors.nom && (
@@ -200,9 +212,15 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                             <input
                                 type="text"
                                 {...register('poste', { required: 'Le poste est requis' })}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                maxLength={80} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 80) {
+                                        e.target.value = e.target.value.slice(0, 80);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('poste').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'poste')} `}
                             />
                         </div>
 
@@ -221,9 +239,8 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                     {...register('sexe',
                                         { required: 'Veuillez selectionnez un sexe' }
                                     )}
-                                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                        focus:outline-none focus:bg-white focus:border-blue-500
-                                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+
+                                    className={`${style} ${verifieChamps(errors, watchedFields, 'sexe')} `}
                                     placeholder='Ex: 0991631180 '
                                 >
                                     <option value="Homme">Homme</option>
@@ -250,9 +267,15 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                     {...register('telephone',
                                         { required: 'Le numéro de téléphone est requis' }
                                     )}
-                                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                        focus:outline-none focus:bg-white focus:border-blue-500
-                                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    maxLength={12} // limite stricte
+                                    onChange={(e) => {
+                                        if (e.target.value.length > 12) {
+                                            e.target.value = e.target.value.slice(0, 12);
+                                        }
+                                        // mettre à jour React Hook Form
+                                        register('telephone').onChange(e)
+                                    }}
+                                    className={`${style} ${verifieChamps(errors, watchedFields, 'telephone')} `}
                                     placeholder='Ex: 0991631180 '
                                 />
 
@@ -276,10 +299,16 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                 {...register('niveau_etude',
                                     { required: "Veuillez renseignez le niveau d'étude" }
                                 )}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                        focus:outline-none focus:bg-white focus:border-blue-500
-                                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder='Ex: hellyvibes@gmail.com'
+                                maxLength={80} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 80) {
+                                        e.target.value = e.target.value.slice(0, 80);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('niveau_etude').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'niveau_etude')} `}
+                                placeholder='Ex: Licencié en informatique'
                             />
 
                             {errors.niveau_etude && (
@@ -299,9 +328,15 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                     <input
                                         type="text"
                                         {...register(`competences.${index}`)}
-                                        className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                                focus:outline-none focus:bg-white focus:border-blue-500
-                                                transition-all duration-300"
+                                        maxLength={80}
+                                        onChange={(e) => {
+                                            if (e.target.value.length > 80) {
+                                                e.target.value = e.target.value.slice(0, 80);
+                                            }
+                                            // mettre à jour React Hook Form
+                                            register(`competences.${index}`).onChange(e)
+                                        }}
+                                        className={`${style} ${verifieChamps(errors, watchedFields, `competences.${index}`)} `}
                                     />
                                     {fields.length > 1 && (
                                         <button

@@ -17,6 +17,8 @@ export const DependencyApi = {
             }
 
             const response = await window.api.createDependency(data);
+            console.log(response);
+
 
             if (!response.success) {
 

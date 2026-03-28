@@ -5,6 +5,7 @@ import {
 import React, { useState } from 'react'
 import ProfileModify from './ProfileModify';
 import { useProjects } from "../../../hooks/useProjets"
+import { formateDate, mettreEnMajuscule, limiteTexte } from '../../../Services/functions';
 
 // Main Component
 const ProfileContent = ({ project }) => {
@@ -137,40 +138,20 @@ const ProfileContent = ({ project }) => {
     };
 
     const typeInfo = detailTypeProjet(project.type_projet);
-
     const statusInfo = getStatusInfo(project.status);
-
-    // Formater les dates
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Non définie';
-        return new Date(dateString).toLocaleDateString('fr-FR');
-    };
-
-
-    const formateDate2 = (dateString) => {
-        if (!dateString) return 'Non définie';
-        return new Date(dateString).toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        })
-    }
-
-
 
 
     return (
         <div className="min-h-screen bg-gray-200 px-4  ">
 
-            <div className="max-w-8xl mx-auto flex flex-col items-center py-2 pb-4 ">
+            <div className="max-w-8xl mx-auto flex flex-col items-center  ">
 
                 {/* Header avec gradient */}
-                <div className='w-full  bg-primary shadow-sm rounded-lg p-4 flex justify-between items-center'>
-                    <h1 className='text-xl text-white font-bold'>Profil du projet</h1>
+                <div className='w-full  bg-primary shadow-sm rounded-lg px-3 py-2 flex justify-between items-center'>
+                    <h1 className='text-2xd text-white font-bold'>Profil du projet</h1>
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className='bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2 shadow-md'
+                        className='bg-white text-blue-600 p-2  rounded-lg font-semibold hover:bg-blue-50 transition-all duration-300 flex items-center gap-2 shadow-md text-2xd'
                     >
                         <Edit /> Modifier les informations
                     </button>
@@ -180,105 +161,87 @@ const ProfileContent = ({ project }) => {
                 {/* Contenu principal */}
                 <div className='w-full rounded-b-lg p-4'>
                     {/* Section Statut et Priorité */}
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-6 '>
 
-                        {/* Statut */}
-                        <div className='bg-white p-4 rounded-lg shadow-md'>
-                            <div className='flex items-center gap-3 mb-3'>
-                                <AccessTime className='text-blue-600' />
-                                <h3 className='text-lg font-semibold text-gray-700'>Statut</h3>
-                            </div>
-                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${statusInfo.color}`}>
-                                {statusInfo.icon}
-                                <span className='font-medium'>{statusInfo.label}</span>
-                            </div>
-                        </div>
-
-
-                        {/* Progression */}
-                        <div className='bg-white p-4 rounded-lg shadow-md'>
-                            <div className='flex items-center gap-3 mb-3'>
-                                <TrendingUp className='text-blue-600' />
-                                <h3 className='text-lg font-semibold text-gray-700'>Progression</h3>
-                            </div>
-                            <div className='flex items-center gap-4'>
-                                <div className='flex-1'>
-                                    <div className='w-full bg-gray-200 rounded-full h-3'>
-                                        <div
-                                            className='bg-blue-600 rounded-full h-3 transition-all duration-500'
-                                            style={{ width: `20%` }}
-                                        ></div>
-                                    </div>
-                                </div>
-                                <span className='text-xl font-bold text-blue-600'>20%</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Informations générales */}
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-8 mb-8'>
                         {/* Nom du projet */}
-                        <div className='bg-blue-100 p-6 rounded-lg shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-blue-600 rounded-full'>
+                        <div className='bg-white rounded-lg shadow-sm h-25 flex  flex-col justify-center px-4'>
+
+                            <div className='flex items-center gap-3 '>
+                                <div className='bg-blue-600 rounded-full p-1.5'>
                                     <Person2Rounded className='text-white' />
                                 </div>
-                                <h3 className='text-xl font-bold text-gray-800'>Nom du projet</h3>
+                                <h3 className='text-2xd font-bold text-gray-800'>Nom du projet</h3>
                             </div>
-                            <p className='text-gray-700 font-medium pl-14'>
-                                {project.nom_projet ? project.nom_projet : " non defini"}
+                            <p className='text-gray-700 font-medium pl-14 text-2xd'>
+                                {project.nom_projet ? mettreEnMajuscule(project.nom_projet) : " non defini"}
                             </p>
+
                         </div>
 
                         {/* Chef de projet */}
-                        <div className='bg-green-100 p-6 rounded-lg shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-green-600 rounded-full'>
+                        <div className='bg-white rounded-lg shadow-sm h-25 flex  flex-col justify-center px-4'>
+                            <div className='flex items-center gap-3'>
+                                <div className='p-1.5 bg-green-600 rounded-full'>
                                     <Person2Rounded className='text-white' />
                                 </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Chef de projet</h3>
+                                <h3 className='text-2xd font-bold text-gray-800'>Chef de projet</h3>
                             </div>
-                            <p className='text-gray-700 font-medium pl-14'>
-                                {project.chef_projet ? project.chef_projet : " non defini"}
+                            <p className='text-gray-700 font-medium pl-14 text-2xd'>
+                                {project.chef_projet ? mettreEnMajuscule(project.chef_projet) : " non defini"}
                             </p>
                         </div>
+
+                        {/* Statut */}
+                        <div className='bg-white rounded-lg shadow-sm h-25 flex  flex-col justify-center px-4 gap-3'>
+                            <div className='flex items-center gap-3'>
+                                <AccessTime className='text-blue-600' />
+                                <h3 className='text-2xd font-semibold text-gray-700'>Statut</h3>
+                            </div>
+                            <div className={`inline-flex items-center gap-3 px-4 py-1.5 rounded-full text-2xd ${statusInfo.color}`}>
+                                {statusInfo.icon}
+                                <span className='font-medium text-xd'>{statusInfo.label}</span>
+                            </div>
+                        </div>
+
                     </div>
+
 
                     {/* Description */}
-                    <div className='mb-8'>
-                        <div className='p-6 rounded-lg shadow-sm bg-purple-100'>
-                            <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-purple-600 rounded-full'>
-                                    <Description className='text-white' />
-                                </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Description du projet</h3>
-                            </div>
-                            <p className='text-gray-600 pl-14'>
+                    <div className='p-6  mt-4 bg-white rounded-lg shadow-sm h-30 flex  flex-col justify-center px-4'>
 
-                                {project.description ? project.description : " non defini"}
-                            </p>
+                        <div className='flex items-center gap-3'>
+                            <div className='p-1.5 bg-purple-600 rounded-full'>
+                                <Description className='text-white' />
+                            </div>
+                            <h3 className='text-2xd font-bold text-gray-800'>Description du projet</h3>
                         </div>
+                        <p className='text-gray-600 pl-14 text-2xd'>
+                            {project.description ? limiteTexte(project.description) : " non defini"}
+                        </p>
                     </div>
 
+
                     {/* Dates du projet */}
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-8'>
-                        <div className='bg-white p-6 rounded-lg shadow-md'>
-                            <div className='flex items-center gap-3 mb-3'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-4'>
+
+                        <div className='bg-white rounded-lg shadow-sm h-25 flex  flex-col justify-center px-4 gap-2'>
+
+                            <div className='flex items-center gap-3 '>
                                 <CalendarToday className='text-green-500' />
-                                <h3 className='font-semibold text-gray-700'>Date de début</h3>
+                                <h3 className='font-semibold text-gray-700 text-2xd'>Date de début</h3>
                             </div>
-                            <p className='text-lg font-medium text-gray-800'>
-                                {project.date_debut ? formateDate2(project.date_debut) : " non defini"}
+                            <p className='text-2xd font-medium text-gray-800 ml-8'>
+                                {project.date_debut ? formateDate(project.date_debut) : " non defini"}
                             </p>
                         </div>
 
-                        <div className='bg-white p-6 rounded-lg shadow-md'>
-                            <div className='flex items-center gap-3 mb-3'>
+                        <div className='bg-white rounded-lg shadow-sm h-25 flex  flex-col justify-center px-4 gap-2'>
+                            <div className='flex items-center gap-3 '>
                                 <CalendarToday className='text-blue-500' />
-                                <h3 className='font-semibold text-gray-700'>Date de fin prévue</h3>
+                                <h3 className='font-semibold text-gray-700 text-2xd'>Date de fin prévue</h3>
                             </div>
-                            <p className='text-lg font-medium text-gray-800'>
-                                {project.date_fin ? formateDate2(project.date_fin) : " non defini"}
+                            <p className='text-2xd font-medium text-gray-800 ml-8'>
+                                {project.date_fin ? formateDate(project.date_fin) : " non defini"}
                             </p>
                         </div>
 
@@ -286,83 +249,91 @@ const ProfileContent = ({ project }) => {
                     </div>
 
                     {/* Objectifs */}
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-8 mb-8'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-8 mt-4'>
+
                         {/* Court terme */}
-                        <div className='p-6 rounded-lg bg-yellow-100 shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-yellow-600 rounded-full'>
+                        <div className='bg-white rounded-lg shadow-sm h-45 flex  flex-col justify-center px-4 gap-2'>
+
+                            <div className='flex items-center gap-3 '>
+                                <div className='p-1.5 bg-yellow-600 rounded-full'>
                                     <Flag className='text-white' />
                                 </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Objectif à court terme</h3>
+                                <h3 className='text-lg font-bold text-gray-800 text-2xd'>Objectif à court terme</h3>
                             </div>
-                            <p className='text-gray-600 mb-4 pl-14'>
-
-                                {project.objectif_court_terme ? project.objectif_court_terme : " non defini"}
+                            <p className='text-gray-600 mb-4 pl-14 text-2xd'>
+                                {project.objectif_court_terme ? limiteTexte(project.objectif_court_terme, 125) : " non defini"}
                             </p>
-                            <div className='space-y-3 pl-14'>
+                            <div className='flex items-center gap-20 pl-14'>
+
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-blue-500' />
                                     <span className='font-semibold'>Début :</span>
-                                    <span className='text-gray-600'>
-                                        {project.objectif_court_terme_debut ? formateDate2(project.objectif_court_terme_debut) : " non defini"}
+                                    <span className='text-gray-600 '>
+                                        {project.objectif_court_terme_debut ? formateDate(project.objectif_court_terme_debut) : " non defini"}
                                     </span>
                                 </div>
+
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-red-500' />
                                     <span className='font-semibold'>Fin :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_court_terme_fin ? formateDate2(project.objectif_court_terme_fin) : " non defini"}
+                                        {project.objectif_court_terme_fin ? formateDate(project.objectif_court_terme_fin) : " non defini"}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Long terme */}
-                        <div className='bg-green-100 p-6 rounded-lg shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
-                                <div className='p-2 bg-green-600 rounded-full'>
+                        <div className='bg-white rounded-lg shadow-sm h-45 flex  flex-col justify-center px-4 gap-2'>
+
+                            <div className='flex items-center gap-3 '>
+                                <div className='p-1.5 bg-yellow-600 rounded-full'>
                                     <Flag className='text-white' />
                                 </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Objectif à long terme</h3>
+                                <h3 className='text-lg font-bold text-gray-800 text-2xd'>Objectif à long terme</h3>
                             </div>
-                            <p className='text-gray-600 mb-4 pl-14'>
-                                {project.objectif_long_terme ? project.objectif_long_terme : " non defini"}
+                            <p className='text-gray-600 mb-4 pl-14 text-2xd'>
+                                {project.objectif_long_terme ? limiteTexte(project.objectif_long_terme, 125) : " non defini"}
                             </p>
-                            <div className='space-y-3 pl-14'>
+                            <div className='flex items-center gap-20 pl-14'>
+
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-blue-500' />
                                     <span className='font-semibold'>Début :</span>
-                                    <span className='text-gray-600'>
-                                        {project.objectif_long_terme_debut ? formateDate2(project.objectif_long_terme_debut) : " non defini"}
+                                    <span className='text-gray-600 '>
+                                        {project.objectif_long_terme_debut ? formateDate(project.objectif_long_terme_debut) : " non defini"}
                                     </span>
                                 </div>
+
                                 <div className='flex items-center gap-3 text-sm'>
                                     <CalendarToday className='text-red-500' />
                                     <span className='font-semibold'>Fin :</span>
                                     <span className='text-gray-600'>
-                                        {project.objectif_long_terme_fin ? formateDate2(project.objectif_long_terme_fin) : " non defini"}
+                                        {project.objectif_long_terme_fin ? formateDate(project.objectif_long_terme_fin) : " non defini"}
                                     </span>
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     {/* Clients cibles et Type de projet */}
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-8 mt-4'>
+
                         {/* Clients cibles */}
-                        <div className='p-6 rounded-lg bg-red-100 shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
+                        <div className='p-6 bg-white rounded-lg shadow-sm  flex  flex-col justify-start px-4'>
+                            <div className='flex items-center gap-3 '>
                                 <div className='p-2 bg-red-600 rounded-full'>
                                     <GroupAdd className='text-white' />
                                 </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Prospects cibles</h3>
+                                <h3 className='text-lg font-bold text-gray-800 text-2xd'>Prospects cibles</h3>
                             </div>
                             <div className='pl-14'>
                                 <ul className='list-disc pl-5 space-y-1'>
                                     <ul className='list-disc pl-5 space-y-1'>
                                         {Array.isArray(project?.prospects_cibles) && project.prospects_cibles.length > 0 ? (
                                             project.prospects_cibles.map((prospect, index) => (
-                                                <li key={index} className='text-gray-700'>
+                                                <li key={index} className='text-gray-700 text-2xd'>
                                                     {prospect}
                                                 </li>
                                             ))
@@ -375,19 +346,19 @@ const ProfileContent = ({ project }) => {
                         </div>
 
                         {/* Type de projet */}
-                        <div className='bg-gray-100 p-6 rounded-lg shadow-sm'>
-                            <div className='flex items-center gap-3 mb-4'>
+                        <div className='p-6 bg-white rounded-lg shadow-sm  flex  flex-col justify-start px-4'>
+                            <div className='flex items-center gap-3 '>
                                 <div className='p-2 bg-gray-700 rounded-full'>
                                     <Category className='text-white' />
                                 </div>
-                                <h3 className='text-lg font-bold text-gray-800'>Type de projet</h3>
+                                <h3 className='text-lg font-bold text-gray-800 text-2xd'>Type de projet</h3>
                             </div>
                             <div className='pl-14'>
                                 <span className='inline-block bg-blue-600 text-white px-4 py-1 rounded-full text-sm font-medium mb-3'>
                                     {project.type_projet ? project.type_projet : "non defini"}
                                 </span>
-                                <p className='text-gray-600'>
-                                    {typeInfo.description}
+                                <p className='text-gray-600 text-sm'>
+                                    {limiteTexte(typeInfo.description, 150)}
                                 </p>
                             </div>
                         </div>

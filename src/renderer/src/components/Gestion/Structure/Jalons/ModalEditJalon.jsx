@@ -3,57 +3,79 @@ import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { Close, Save, Flag, Description, CalendarToday, Category } from "@mui/icons-material";
 import { useJalon } from '../../../../hooks/useJalon';
+import { styleChamps, verifieChamps, formateDate, formateDateChamps } from '../../../../Services/functions';
+import { alertService } from '../../../../Services/alertService';
+
 
 const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
-    const { register, handleSubmit, formState: { errors }, reset } = useForm();
+    const { register, handleSubmit, formState: { errors, isDirty }, reset, watch } = useForm();
     const [loading, setLoading] = useState(false);
     const { modifieJalon } = useJalon();
 
-    const formatDate = (date) => {
-        if (!date) return '';
-        return new Date(date).toISOString().split('T')[0];
-    };
+
 
     useEffect(() => {
         if (jalonToEdite) {
             reset({
                 title: jalonToEdite.title || '',
                 description: jalonToEdite.description || '',
-                date: formatDate(jalonToEdite.date),
+                date: formateDateChamps(jalonToEdite.date),
                 phase_id: jalonToEdite.phase_id || '',
                 type: jalonToEdite.type || 'validation'
             });
         }
     }, [jalonToEdite, reset]);
 
+    const watchedFields = watch();
+    const style = styleChamps();
+
     const onSubmit = async (data) => {
-        setLoading(true);
 
-        const formattedData = {
-            ...jalonToEdite,
-            ...data,
-            phase_id: parseInt(data.phase_id),
-            date: formatDate(data.date),
-        };
-
-
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        const result = await modifieJalon(jalonToEdite.jalon_id, formattedData);
-
-
-        if (!result.success) {
-            console.error(result.error || result.errors);
+        if (!isDirty) {
+            alertService.info("Aucune modification trouvée");
             setLoading(false);
-            return;
+            return null;
         }
 
-        setLoading(false);
-        handleClose();
+        try {
+
+            setLoading(true);
+            const formattedData = {
+                ...jalonToEdite,
+                ...data,
+                phase_id: parseInt(data.phase_id),
+                date: formateDateChamps(data.date),
+            };
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            const result = await modifieJalon(jalonToEdite.jalon_id, formattedData);
+
+
+            if (!result.success) {
+                console.error(result.error || result.errors);
+                setLoading(false);
+                return;
+            }
+
+            setLoading(false);
+            handleClose();
+
+        } catch (error) {
+            console.log(error);
+
+
+        }
+
+
+
+
+
 
     };
 
     const handleClose = () => {
         reset();
+        setLoading(false);
         onClose();
     };
 
@@ -61,10 +83,11 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
 
     return (
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex justify-between items-center">
-                    <h2 className="text-xl text-white font-bold">Modifier le jalon</h2>
+                <div className="bg-primary p-2 flex justify-between items-center">
+                    <h2 className="text-2xd text-white font-bold">Modifier le jalon</h2>
                     <button onClick={onClose} className="text-white hover:bg-blue-700 p-1 rounded-full">
                         <Close />
                     </button>
@@ -80,10 +103,15 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
                         <input
                             type="text"
                             {...register('title', { required: 'Le titre est requis' })}
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.title ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('title').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'title')} `}
                         />
                         {errors.title && (
                             <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
@@ -98,10 +126,15 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
                         <textarea
                             {...register('description', { required: 'La description est requise' })}
                             rows="3"
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.description ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={120} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 120) {
+                                    e.target.value = e.target.value.slice(0, 120);
+                                }
+                                // mettre à jour React Hook Form
+                                register('title').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'description')} `}
                         />
                         {errors.description && (
                             <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
@@ -117,10 +150,8 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
                             <input
                                 type="date"
                                 {...register('date', { required: 'La date est requise' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.date ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'date')} `}
                             />
                             {errors.date && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date.message}</p>
@@ -134,10 +165,8 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
                             </label>
                             <select
                                 {...register('phase_id', { required: 'La phase est requise' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.phase_id ? 'border-red-500' : 'border-gray-300'
-                                    }`}>
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'phase_id')} `}>
                                 <option value="">Sélectionnez</option>
                                 {phases.map(phase => (
                                     <option key={phase.phase_id} value={phase.phase_id}>
@@ -157,7 +186,8 @@ const EditJalon = ({ isOpen, onClose, jalonToEdite, phases }) => {
                         </label>
                         <select
                             {...register('type')}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'type')} `}>
                             <option value="validation">Validation</option>
                             <option value="revue">Revue</option>
                             <option value="livrable">Livrable</option>

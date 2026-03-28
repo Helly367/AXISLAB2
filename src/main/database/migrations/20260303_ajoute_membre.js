@@ -10,10 +10,11 @@ export const up = function (knex) {
     table.string("telephone");
     table.string("email");
     table.string("niveau_etude");
-    table.json("competences").notNullable();  
-    table.integer("project_id")
+      table.json("competences").notNullable();
+      
+    table.integer("projet_id")
       .unsigned().references("projet_id")
-      .inTable("projects")
+      .inTable("projets")
       .onDelete("CASCADE");
 
     table.timestamps(true, true);

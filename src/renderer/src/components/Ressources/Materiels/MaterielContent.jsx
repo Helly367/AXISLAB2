@@ -9,104 +9,41 @@ import {
     Inventory,
     AttachMoney,
     ShoppingCart,
-    Category
+    Category,
+    AddCircle
 } from "@mui/icons-material";
 
 import AjouterMateriel from './AjouterMateriel';
 import ModifyMateriel from './ModifyMateriel';
+import { useBudgets } from "../../../hooks/useBudgets"
+import { useMateriels } from '../../../hooks/useMateriels';
 
-const MaterielContent = ({
-    budgetGlobal = 0,
-    onUpdateBudget,
-    onUpdateMateriels,
-    initialMateriels = []
-}) => {
+const MaterielContent = ({ project }) => {
 
-    const [materiels, setMateriels] = useState(initialMateriels || []);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [materielToEdit, setMaterielToEdit] = useState(null);
     const [filter, setFilter] = useState('all');
+    const { budget } = useBudgets();
+    const { materiels } = useMateriels();
 
-    // Sync props → state
-    useEffect(() => {
-        setMateriels(initialMateriels || []);
-    }, [initialMateriels]);
+    // Sync props → state seulement si différent
+  
 
+    // Calculs
     const totalMateriels = materiels.reduce(
         (acc, m) => acc + (Number(m.prix || 0) * Number(m.quantite || 0)),
         0
     );
 
-    const budgetRestant = Number(budgetGlobal) - totalMateriels;
-    const peutAjouter = budgetRestant > 0;
-
-    const stats = {
-        disponible: materiels.filter(m => m.statut === 'disponible').length,
-        commande: materiels.filter(m => m.statut === 'commandé').length,
-        livre: materiels.filter(m => m.statut === 'livré').length
-    };
+   
 
     const notifyMaterielsChange = (list) => {
-        setMateriels(list);
+
         onUpdateMateriels?.(list);
     };
 
-    const handleAddMateriel = (newMateriel) => {
-
-        const cout = Number(newMateriel.prix || 0) *
-            Number(newMateriel.quantite || 0);
-
-        if (totalMateriels + cout > budgetGlobal) {
-            alert("Budget insuffisant !");
-            return;
-        }
-
-        const updated = [
-            ...materiels,
-            { ...newMateriel, id: Date.now() }
-        ];
-
-        notifyMaterielsChange(updated);
-
-        onUpdateBudget?.(budgetGlobal - (totalMateriels + cout));
-
-        setIsAddModalOpen(false);
-    };
-
-    const handleEditMateriel = (updatedMateriel) => {
-
-        const ancien = materiels.find(m => m.id === updatedMateriel.id);
-        if (!ancien) return;
-
-        const ancienTotal =
-            Number(ancien.prix || 0) * Number(ancien.quantite || 0);
-
-        const nouveauTotal =
-            Number(updatedMateriel.prix || 0) *
-            Number(updatedMateriel.quantite || 0);
-
-        if (budgetRestant + (ancienTotal - nouveauTotal) < 0) {
-            alert("Budget insuffisant pour cette modification");
-            return;
-        }
-
-        const updated = materiels.map(m =>
-            m.id === updatedMateriel.id ? updatedMateriel : m
-        );
-
-        notifyMaterielsChange(updated);
-
-        setIsEditModalOpen(false);
-        setMaterielToEdit(null);
-    };
-
-    const handleDeleteMateriel = (id) => {
-        if (!window.confirm("Supprimer ce matériel ?")) return;
-
-        const updated = materiels.filter(m => m.id !== id);
-        notifyMaterielsChange(updated);
-    };
+   
 
     const handleOpenEditModal = (materiel) => {
         setMaterielToEdit(materiel);
@@ -119,80 +56,55 @@ const MaterielContent = ({
             : materiels.filter(m => m.statut === filter);
 
     return (
-        <div className="w-full p-4 bg-gray-200">
+        <div className="min-h-screen bg-gray-200">
+            <div className='max-w-8xl mx-auto px-4 py-2'>
 
-            <div className="bg-primary rounded-lg shadow-md p-4 flex justify-between mb-6">
-                <h1 className="text-xl text-white font-bold">
-                    Matériels du projet
-                </h1>
+                <div className="w-full  flex items-center justify-between bg-primary rounded-lg shadow-md p-2  ">
+                    <h1 className="text-2xd text-white font-bold">
+                        Matériels du projet
+                    </h1>
 
-                <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    disabled={!peutAjouter}
-                    className={`px-6 py-2 rounded-lg flex gap-2 ${peutAjouter
-                        ? "bg-white text-blue-600"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                >
-                    <Add /> Ajouter un matériel
-                </button>
-            </div>
-
-            {/* Stats */}
-            <div className="grid md:grid-cols-4 gap-6 mb-6">
-
-                <StatCard title="Budget total"
-                    value={`${budgetGlobal.toLocaleString()} USD`} />
-
-                <StatCard title="Coût matériels"
-                    value={`${totalMateriels.toLocaleString()} USD`}
-                    color="text-orange-500"
-                />
-
-                <StatCard title="Budget restant"
-                    value={`${budgetRestant.toLocaleString()} USD`}
-                    color={budgetRestant >= 0 ? "text-green-500" : "text-red-500"}
-                />
-
-                <StatCard
-                    title="Statut"
-                    value={budgetRestant >= 0
-                        ? "Budget suffisant"
-                        : "Budget insuffisant"}
-                    icon={budgetRestant >= 0
-                        ? <CheckCircle className="text-green-500" />
-                        : <Warning className="text-red-500" />}
-                />
-
-            </div>
-
-            {/* Liste */}
-            {materielsFiltres.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-lg shadow-md">
-                    <Inventory className="text-gray-400 text-6xl mx-auto mb-4" />
-                    <p className="text-gray-500">
-                        Aucun matériel enregistré
-                    </p>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all flex items-center gap-2 shadow-md"
+                    >
+                        <AddCircle /> Ajouter un matériel
+                    </button>
                 </div>
-            ) : (
-                <div className="grid md:grid-cols-3 gap-6">
-                    {materielsFiltres.map(m => (
-                        <MaterielCard
-                            key={m.id}
-                            materiel={m}
-                            onEdit={handleOpenEditModal}
-                            onDelete={handleDeleteMateriel}
-                        />
-                    ))}
-                </div>
-            )}
+
+                {/* Liste */}
+                {materielsFiltres.length === 0 ? (
+
+                    <div className="text-center py-16 bg-white rounded-lg shadow-md mt-4">
+                        <p className="text-gray-500 text-lg font-medium">
+
+                            <span className='ml-2'> Aucun materiel disponible pour le moment</span>
+
+                        </p>
+                        <p className="text-sm text-gray-400 mt-2">
+                            « Ajouter des matieriels a votre projet. »
+                        </p>
+
+
+                    </div>
+
+                ) : (
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {materielsFiltres.map(m => (
+                            <MaterielCard
+                                key={m.id}
+                                materiel={m}
+                            />
+                        ))}
+                    </div>
+                )}
 
             {/* Modals */}
             <AjouterMateriel
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
-                onSave={handleAddMateriel}
-                budgetRestant={budgetRestant}
+                project={project}
+                budget={budget}
             />
 
             <ModifyMateriel
@@ -201,11 +113,11 @@ const MaterielContent = ({
                     setIsEditModalOpen(false);
                     setMaterielToEdit(null);
                 }}
-                onSave={handleEditMateriel}
                 materielToEdit={materielToEdit}
-                budgetRestant={budgetRestant}
+               
             />
 
+            </div>
         </div>
     );
 };

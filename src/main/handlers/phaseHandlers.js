@@ -1,10 +1,8 @@
 import db from "../database/db.js";
-import { phaseSchema, normalizePhaseData , normalizePhaseDataUpdate } from "../database/schemas/phaseSchema.js";
+import { phaseSchema, normalizePhaseData, normalizePhaseDataUpdate } from "../database/schemas/phaseSchema.js";
 
 function formatPhase(phase) {
-
   if (!phase) return null;
-
   return {
     ...phase,
     taches: JSON.parse(phase.taches || "[]"),
@@ -12,186 +10,300 @@ function formatPhase(phase) {
   };
 }
 
-export async function createPhase(data) {
+function validatePhase(data, isCreate) {
+  const { error, value } = phaseSchema(isCreate).validate(data, {
+    abortEarly: false,
+    stripUnknown: true
+  });
 
+  if (error) {
+    return {
+      isValid: false,
+      errors: error.details.map(err => ({
+        field: err.path[0],
+        message: err.message
+      }))
+    };
+  }
+
+  return { isValid: true, value };
+}
+
+export async function createPhase34(data) {
   try {
-    
-
     const cleaned = normalizePhaseData(data);
+    const validation = validateProject(cleaned, true);
+    if (!validation.isValid) return { success: false, error: validation.errors };
 
-    const { error, value } = phaseSchema.validate(cleaned, {
-      abortEarly: false
-    });
+    const validatedData = validation.value;
+    if (!validatedData.projet_id) return { success: false, error: "projet_id requis" };
 
-    if (error) {
+    const budget = await db("budgets").where({ projet_id: validatedData.projet_id }).first();
+    if (!budget) return { success: false, error: "Budget du projet introuvable" };
+
+    const budget_phase = Number(validatedData.budget_phase) || 0;
+    if (budget_phase < 0) return { success: false, error: "Le budget de la phase ne peut pas être négatif" };
+    if (budget_phase > budget.budget_restant) {
       return {
         success: false,
-        errors: error.details.map(e => ({
-          field: e.path[0],
-          message: e.message
-        }))
+        error: `Votre budget est insuffisant pour créer une nouvelle phase. Restant: ${budget.budget_restant} ${budget.devise}`
       };
     }
 
-    const [phase_id] = await db("phases").insert({
-      ...value,
-      taches: JSON.stringify(value.taches),
-      membres: JSON.stringify(value.membres),
+    const insertData = {
+      ...validatedData,
+      taches: JSON.stringify(validatedData.taches || []),
+      membres: JSON.stringify(validatedData.membres || []),
       created_at: new Date(),
       updated_at: new Date()
-    });
-
-    const phase = await db("phases")
-      .where({ phase_id })
-      .first();
-
-    return {
-      success: true,
-      data: formatPhase(phase)
     };
 
-  } catch (error) {
-
-    console.error("Erreur createPhase:", error);
-
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-export async function updatePhase(phaseId, updatePhaseData) {
-  try {
-
-    if (!phaseId || isNaN(phaseId)) {
-      return {
-        success: false,
-        errors: [{ field: "id", message: "ID invalide" }]
-      };
-    }
-
-    const {
-      phase_id,
-      created_at,
-      updated_at,
-      ...cleanData
-    } = updatePhaseData;
-
-    const { error, value } = phaseSchema.validate(cleanData, {
-      abortEarly: false,
-      stripUnknown: true
-    });
-
-    if (error) {
-      return {
-        success: false,
-        errors: error.details.map(e => ({
-          field: e.path[0],
-          message: e.message
-        }))
-      };
-    }
-
-    await db("phases")
-      .where({ phase_id: phaseId })
-      .update({
-        ...value,
-        taches: JSON.stringify(value.taches),
-        membres: JSON.stringify(value.membres),
+    const [phase_id] = await db.transaction(async (trx) => {
+      const [id] = await trx("phases").insert(insertData);
+      await trx("budgets").where({ projet_id: validatedData.projet_id }).update({
+        budget_depense: Number(budget.budget_depense) + budget_phase,
+        budget_restant: Number(budget.budget_restant) - budget_phase,
         updated_at: new Date()
       });
+      return [id];
+    });
 
-    const phase = await db("phases")
-      .where({ phase_id: phaseId })
-      .first();
+    const [updatedBudget, phase] = await Promise.all([
+      db("budgets").where({ projet_id: validatedData.projet_id }).first(),
+      db("phases").where({ phase_id }).first()
+    ]);
 
-    return {
-      success: true,
-      data: formatPhase(phase)
-    };
-
+    return { success: true, data: { budget: updatedBudget, phase: formatPhase(phase) } };
   } catch (error) {
-
-    console.error("Erreur updatePhase:", error);
-
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error("Erreur createPhase:", error);
+    return { success: false, error: error.message || "Erreur lors de la création de la phase" };
   }
 }
 
-export async function getAllPhases() {
 
+export async function createPhase(data) {
   try {
+    const cleaned = normalizePhaseData(data);
+    const validation = validatePhase(cleaned, true);
 
-    const phases = await db("phases")
-      .select("*")
-      .orderBy("created_at", "desc");
-
-    return {
-      success: true,
-      data: phases.map(formatPhase)
-    };
-
-  } catch (error) {
-
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
-
-export async function getPhaseById(id) {
-
-  try {
-
-    const phase = await db("phases")
-      .where({ phase_id: id })
-      .first();
-
-    if (!phase) {
-      return {
-        success: false,
-        error: "Phase non trouvée"
-      };
+    if (!validation.isValid) {
+      return { success: false, error: validation.errors };
     }
 
-    return {
-      success: true,
-      data: formatPhase(phase)
+    const validatedData = validation.value;
+
+    if (!validatedData.projet_id) {
+      return { success: false, error: "projet_id requis" };
+    }
+
+    const budget_phase = Number(validatedData.budget_phase) || 0;
+
+    const insertData = {
+      ...validatedData,
+      taches: JSON.stringify(validatedData.taches || []),
+      membres: JSON.stringify(validatedData.membres || []),
+      created_at: new Date(),
+      updated_at: new Date()
     };
 
-  } catch (error) {
+    const phase_id = await db.transaction(async (trx) => {
 
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-}
+      const budget = await trx("budgets")
+        .where({ projet_id: validatedData.projet_id })
+        .forUpdate()
+        .first();
 
-export async function deletePhase(phaseId) {
-  try {
+      if (!budget) throw new Error("Budget introuvable");
 
-    await db("phases")
-      .where({ phase_id: phaseId })
-      .del();
+      if (budget_phase > budget.budget_restant) {
+        throw new Error(
+          `Budget insuffisant. Restant: ${budget.budget_restant} ${budget.devise}`
+        );
+      }
+
+      const [id] = await trx("phases").insert(insertData);
+
+      await trx("budgets")
+        .where({ projet_id: validatedData.projet_id })
+        .update({
+          budget_depense: Number(budget.budget_depense) + budget_phase,
+          budget_restant: Number(budget.budget_restant) - budget_phase,
+          updated_at: new Date()
+        });
+
+      return id;
+    });
+
+    const [updatedBudget, phase] = await Promise.all([
+      db("budgets").where({ projet_id: validatedData.projet_id }).first(),
+      db("phases").where({ phase_id }).first()
+    ]);
 
     return {
       success: true,
       data: {
-        phase_id: phaseId
+        budget: updatedBudget,
+        phase: formatPhase(phase)
       }
     };
 
   } catch (error) {
+    console.error("Erreur createPhase:", error);
 
     return {
       success: false,
-      error: error.message
+      error: error.message || "Erreur lors de la création de la phase"
     };
+  }
+}
+
+export async function updatePhase(projet_id, data) {
+  
+  try {
+    const phase_id = data?.phase_id;
+    if (!projet_id) return { success: false, error: "projet_id est requis" };
+    if (!phase_id) return { success: false, error: "phase_id est requis" };
+
+    const existingPhase = await db("phases").where({ phase_id }).first();
+    if (!existingPhase) return { success: false, error: "Phase introuvable" };
+
+    const cleaned = normalizePhaseDataUpdate(data, projet_id);
+    if (!cleaned) return { success: false, error: "Données invalides" };
+
+    const validation = validatePhase(cleaned, false);
+    if (!validation.isValid) return { success: false, error: validation.errors };
+
+    const updateData = {};
+    const jsonFields = ["taches", "membres"];
+    for (const [key, value] of Object.entries(cleaned)) {
+      if (value !== undefined && !["phase_id", "projet_id"].includes(key)) {
+        updateData[key] = jsonFields.includes(key) ? JSON.stringify(value) : value;
+      }
+    }
+
+    let budget_phase = updateData.budget_phase !== undefined ? Number(updateData.budget_phase) : 0;
+    let budgetUpdated = budget_phase !== 0;
+
+    const result = await db.transaction(async (trx) => {
+      // Lock phase
+      const phase = await trx("phases").where({ phase_id }).forUpdate().first();
+      if (!phase) throw new Error("Phase introuvable");
+
+      // Update phase
+      if (Object.keys(updateData).length > 0) {
+        const updateFields = { ...updateData, updated_at: new Date() };
+        if (budget_phase !== 0) {
+          updateFields.budget_phase = Number(phase.budget_phase) + budget_phase;
+          updateFields.budget_restant = Number(phase.budget_restant) + budget_phase;
+        }
+        await trx("phases").where({ phase_id }).update(updateFields);
+      }
+
+      let updatedBudget = null;
+      if (budgetUpdated) {
+        const budget = await trx("budgets").where({ projet_id }).forUpdate().first();
+        if (!budget) throw new Error("Budget du projet introuvable");
+
+        const newBudgetRestant = Number(budget.budget_restant) - budget_phase;
+        if (newBudgetRestant < 0) throw new Error(`Budget insuffisant. Restant: ${budget.budget_restant}`);
+
+        await trx("budgets").where({ projet_id }).update({
+          budget_depense: Number(budget.budget_depense) + budget_phase,
+          budget_restant: newBudgetRestant,
+          updated_at: new Date()
+        });
+
+        updatedBudget = await trx("budgets").where({ projet_id }).first();
+      }
+
+      const updatedPhase = await trx("phases").where({ phase_id }).first();
+      return { updatedPhase, updatedBudget };
+    });
+
+    return {
+      success: true,
+      data: {
+        phase: formatPhase(result.updatedPhase),
+        budget: result.updatedBudget
+      }
+    };
+  } catch (error) {
+    console.error("Erreur updatePhase:", error);
+    return { success: false, error: error.message || "Erreur lors de la mise à jour de la phase" };
+  }
+}
+
+export async function getAllPhases() {
+  try {
+    const phases = await db("phases").select("*").orderBy("created_at", "desc");
+    return { success: true, data: phases.map(formatPhase) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPhaseById(id) {
+  try {
+    const phase = await db("phases").where({ phase_id: id }).first();
+    if (!phase) return { success: false, error: "Phase non trouvée" };
+    return { success: true, data: formatPhase(phase) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deletePhase(projet_id , phaseId) {
+  try {
+    
+    const phase = await db("phases").where({ phase_id: phaseId }).first();
+    if (!phase) return { success: false, error: "Phase non trouvée" };
+    const budget_phase = Number(phase.budget_phase);
+    
+    await db.transaction(async (trx) => {
+      
+      const budget = await trx("budgets").where({ projet_id }).first();
+      if (!budget) return { success: false, error: "budget non trouvée" };
+      
+      let budget_total = Number(budget.budget_total);
+      let budget_depense = Number(budget.budget_depense);
+     
+      budget_total += budget_phase;
+      budget_depense -= budget_phase;
+      let budget_restant = budget_total - budget_depense
+      
+      const updateBudget = {
+        budget_total: budget_total,
+        budget_depense: budget_depense,
+        budget_restant : budget_restant
+        
+      }
+      
+      await trx("budgets").where({ projet_id: projet_id })
+        .update({
+          ...updateBudget,
+          updated_at: new Date()
+        });
+      
+      await trx("phases").where({ projet_id, phase_id : phaseId}).del();
+      
+    });
+    
+     const [updatedPhase, updatedBudget] = await Promise.all([
+       db("phases").where({ projet_id ,phase_id : phaseId }).first(),
+       db("budgets").where({ projet_id }).first()
+     ]);
+    
+    
+    
+    return {
+      success: true,
+      data: {
+        updatedPhase ,
+        updatedBudget,
+        phase_id : phaseId
+      }
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
   }
 }

@@ -3,122 +3,94 @@ import {
     Savings, Business, Timeline, PieChart, Edit, Warning, Refresh, Receipt, WarningAmber, CurrencyExchange, Description
 } from "@mui/icons-material";
 import ConfigBudget from './ConfigBudget';
-import PhaseBudgetDetail from './PhaseBudgetDetail';
-import ExpensesTracker from './ExpensesTracker';
 import CurrencyConverter from './CurrencyConverter';
-import JustificatifsList from './JustificatifsList';
 import { usePhases } from '../../../hooks/usePhase';
-import { alertService } from '../../../functions/alertService';
+import { useBudgets } from '../../../hooks/useBudgets';
+import { useProjects } from '../../../hooks/useProjets';
+import BudgetCard from './BudgetCard';
+import ProgressBudget from './progressBudget';
+import ModalCreatePhase from '../../Gestion/Structure/Phases/CreatePhase';
+import BudgetDepenses from './BudgetDepenses';
 
-const BudgetContent = ({ onUpdateBudget }) => {
+
+const BudgetContent = ({ onUpdateBudget, project }) => {
+    const { budget, devise, convertionBudget } = useBudgets();
     const { phases } = usePhases();
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-    const [budgetConfig, setBudgetConfig] = useState({
-        type: 'interne',
-        montant_total: 0,
-        devise: 'USD',
-        reste: 0,
-        taux_conversion: 1,
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    });
 
     const [activeTab, setActiveTab] = useState('apercu'); // 'apercu', 'depenses', 'justificatifs', 'conversion'
 
 
-
-
-
-
-    const getTypeInfo = () => {
-        if (budgetConfig.type === 'investissement') {
-            return {
-                label: "Projet d'investissement",
-                icon: <Business className="text-purple-600" />,
-                color: 'purple',
-                bg: 'bg-purple-100',
-                text: 'text-purple-800'
-            };
-        } else {
-            return {
-                label: 'Fonds propres',
-                icon: <Savings className="text-green-600" />,
-                color: 'green',
-                bg: 'bg-green-100',
-                text: 'text-green-800'
-            };
-        }
-    };
-
-    const typeInfo = getTypeInfo();
-
     return (
-        <div className="w-full p-4 bg-gray-200">
-            {/* Header */}
-            <div className="bg-primary rounded-lg shadow-md p-4 flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                    <h1 className="text-xl text-white font-bold">Gestion du budget</h1>
+        <div className="min-h-screen bg-gray-200 px-4">
+
+            <div className='max-w-8xl mx-auto flex flex-col items-center  '>
+
+                {/* Header */}
+                <div className="w-full bg-primary rounded-lg shadow-md py-2 px-3 flex justify-between items-center ">
+                    <div className="flex items-center gap-3 ">
+                        <h1 className="text-2xd text-white font-bold">Gestion du budget</h1>
+                    </div>
+                    <div className="flex gap-3">
+
+                        <button
+                            onClick={() => setIsConfigModalOpen(true)}
+                            className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all flex items-center gap-2 shadow-md text-2xd">
+                            <Edit /> Configurer
+                        </button>
+                    </div>
                 </div>
-                <div className="flex gap-3">
 
-                    <button
-                        onClick={() => setIsConfigModalOpen(true)}
-                        className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all flex items-center gap-2 shadow-md">
-                        <Edit /> Configurer
-                    </button>
-                </div>
-            </div>
-
-            {/* Navigation des onglets */}
-            <div className="bg-white rounded-lg shadow-md p-2 mb-6 flex gap-2">
-                <button
-                    onClick={() => setActiveTab('apercu')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${activeTab === 'apercu' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                        }`}>
-                    <PieChart fontSize="small" />
-                    Aperçu
-                </button>
-                <button
-                    onClick={() => setActiveTab('depenses')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${activeTab === 'depenses' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                        }`}>
-                    <Receipt fontSize="small" />
-                    Dépenses
-                </button>
-                <button
-                    onClick={() => setActiveTab('justificatifs')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${activeTab === 'justificatifs' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                        }`}>
-                    <Description fontSize="small" />
-                    Justificatifs
-                </button>
-                <button
-                    onClick={() => setActiveTab('conversion')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${activeTab === 'conversion' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                        }`}>
-                    <CurrencyExchange fontSize="small" />
-                    Conversion
-                </button>
-            </div>
-
-
-
-
-            {activeTab === 'conversion' && (
-                <CurrencyConverter
-                    budgetConfig={budgetConfig}
-                    formatMontant={formatMontant}
+                <BudgetCard
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    budget={budget}
                 />
-            )}
+
+                {activeTab === 'apercu' && (
+                    <ProgressBudget
+                        phases={phases}
+                        devise={devise}
+                        setIsCreateModalOpen={setIsCreateModalOpen}
+
+
+                    />
+                )}
+
+                {activeTab === 'depense' && (
+                    <BudgetDepenses />
+                )}
+
+
+                {activeTab === 'conversion' && (
+                    <CurrencyConverter
+                        budget={budget}
+                        convertionBudget={convertionBudget}
+                        projet_id={project.projet_id}
+
+                    />
+                )}
 
 
 
-            {/* Modal de configuration */}
-            <ConfigBudget
-                isOpen={isConfigModalOpen}
-                onClose={() => setIsConfigModalOpen(false)}
-                phases={phases}
-                currentConfig={budgetConfig}
-            />
+
+                {/* Modal de configuration */}
+                <ConfigBudget
+                    isOpen={isConfigModalOpen}
+                    onClose={() => setIsConfigModalOpen(false)}
+                    phases={phases}
+                    currentConfig={budget}
+                    project={project}
+                />
+
+                <ModalCreatePhase
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    project={project}
+                />
+            </div>
         </div>
     );
 };

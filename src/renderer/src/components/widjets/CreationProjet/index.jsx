@@ -3,11 +3,13 @@ import { useForm } from 'react-hook-form'
 import { joiResolver } from '@hookform/resolvers/joi'
 import Joi from 'joi'
 import { motion, AnimatePresence } from 'framer-motion'
-import { toast } from 'react-toastify';
-import { alertService } from "../../../functions/alertService"
+import { alertService } from "../../../Services/alertService";
+import { devises } from '../../../Services/listes';
+import { useBudgets } from '../../../hooks/useBudgets'
 
 // Schéma de validation Joi
 const projectSchema = Joi.object({
+
   nom_projet: Joi.string().min(2).max(200).required().messages({
     'string.empty': 'Le nom du projet est obligatoire',
     'string.min': 'Le nom doit contenir au moins 2 caractères',
@@ -16,25 +18,39 @@ const projectSchema = Joi.object({
   description: Joi.string().max(1000).required().messages({
     'string.empty': 'La description est obligatoire',
     'any.required': 'La description est requise'
-  })
+  }),
+  budget_total: Joi.number().positive().required().messages({
+    'number.empty': 'Veuillez saisir le budget pour ce projet',
+    'any.required': 'Le budget est requis'
+
+  }),
+  devise: Joi.string().valid("USD", "EUR", "CDF", "XOF", "GBP", "CDF").required().messages({
+    'string.empty': 'Veuillez selectionnez le device pour le budget ',
+    'any.required': 'Le device est requis',
+    'any.valid': 'option séléctionner est invalide'
+
+  }),
 })
 
 const CreationProjet = ({ handleCreate }) => {
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState('')
+  const { setBudget } = useBudgets();
 
   // Initialisation de React Hook Form
   const { register, handleSubmit, formState: { errors }, reset, watch } = useForm({
     resolver: joiResolver(projectSchema),
     defaultValues: {
       nom_projet: '',
-      description: ''
+      description: '',
+      budget_total: '',
+      devise: ''
+
     }
   })
 
   // Surveillance des champs pour animation
   const watchedFields = watch()
-
 
   const onSubmit = async (data) => {
     setLoading(true)
@@ -46,6 +62,7 @@ const CreationProjet = ({ handleCreate }) => {
         ...data,
         chef_projet: null,
         date_debut: null,
+        taux_conversion: 1,
         date_fin: null,
         objectif_long_terme: null,
         objectif_long_terme_debut: null,
@@ -58,16 +75,14 @@ const CreationProjet = ({ handleCreate }) => {
         status: 'planification'
       }
 
-
       // simulation chargement
       await new Promise(resolve => setTimeout(resolve, 5000))
       const result = await handleCreate(projectData)
 
       if (result?.success) {
-
-        alertService.success("Projet créé avec succès")
-
+        setBudget(result.data.budget);
         reset()
+
 
       } else {
 
@@ -85,13 +100,13 @@ const CreationProjet = ({ handleCreate }) => {
       setLoading(false)
     }
   }
-  console.log(serverError);
+
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className='w-150 bg-blue-100 flex items-center justify-center p-4'
+      className='w-170 bg-blue-100 flex items-center justify-center p-4'
     >
       <div className='bg-white w-full max-w-6xl flex flex-col items-center justify-center gap-8 p-10 rounded-2xl shadow-xl border border-white/20'>
         {/* En-tête */}
@@ -117,6 +132,14 @@ const CreationProjet = ({ handleCreate }) => {
                 <input
                   {...register('nom_projet')}
                   type="text"
+                  maxLength={80} // limite stricte
+                  onChange={(e) => {
+                    if (e.target.value.length > 80) {
+                      e.target.value = e.target.value.slice(0, 80); // tronquer à 500 caractères
+                    }
+                    // mettre à jour React Hook Form
+                    register('nom_projet').onChange(e)
+                  }}
                   className={`w-full px-5 py-4 bg-gray-50 border-2 rounded-xl 
                            focus:outline-none focus:bg-white 
                            transition-all duration-300
@@ -154,16 +177,24 @@ const CreationProjet = ({ handleCreate }) => {
                 <textarea
                   {...register('description')}
                   rows={5}
+                  maxLength={500} // limite stricte
+                  onChange={(e) => {
+                    if (e.target.value.length > 500) {
+                      e.target.value = e.target.value.slice(0, 500); // tronquer à 500 caractères
+                    }
+                    // mettre à jour React Hook Form
+                    register('description').onChange(e)
+                  }}
                   className={`w-full px-5 py-4 bg-gray-50 border-2 rounded-xl 
-                           focus:outline-none focus:bg-white 
-                           transition-all duration-300 resize-none
-                           ${errors.description
+                      focus:outline-none focus:bg-white
+                      transition-all duration-300 resize-none
+                      ${errors.description
                       ? 'border-red-500 focus:border-red-500'
                       : watchedFields.description
                         ? 'border-green-500 focus:border-green-500'
                         : 'border-gray-200 focus:border-blue-500'
                     }
-                           disabled:opacity-50 disabled:cursor-not-allowed`}
+                      disabled:opacity-50 disabled:cursor-not-allowed`}
                   placeholder='Décrivez les objectifs et la vision de votre projet...'
                   disabled={loading}
                 />
@@ -171,7 +202,7 @@ const CreationProjet = ({ handleCreate }) => {
                 {/* Compteur de caractères */}
                 {watchedFields.description && (
                   <div className='absolute right-4 bottom-4 text-xs text-gray-400'>
-                    {watchedFields.description.length}/1000
+                    {watchedFields.description.length}/500
                   </div>
                 )}
               </div>
@@ -186,6 +217,99 @@ const CreationProjet = ({ handleCreate }) => {
                   {errors.description.message}
                 </motion.p>
               )}
+            </div>
+          </div>
+
+          {/* Budget du projet */}
+          <div className='group flex justify-between w-full gap-4 '>
+
+            <div className='w-9/12'>
+
+              <label className='text-sm font-semibold text-gray-700 mb-2 block ml-1'>
+                Budget du projet <span className='text-red-500'>*</span>
+              </label>
+              <div className='relative'>
+                <input
+                  {...register('budget_total')}
+                  type="number"
+                  maxLength={16} // limite stricte
+                  onChange={(e) => {
+                    if (e.target.value.length > 16) {
+                      e.target.value = e.target.value.slice(0, 16); // tronquer à 500 caractères
+                    }
+                    // mettre à jour React Hook Form
+                    register('budget_total').onChange(e)
+                  }}
+                  className={`w-full px-5 py-4 bg-gray-50 border-2 rounded-xl 
+                           focus:outline-none focus:bg-white 
+                           transition-all duration-300
+                           ${errors.budget_total
+                      ? 'border-red-500 focus:border-red-500'
+                      : watchedFields.budget_total
+                        ? 'border-green-500 focus:border-green-500'
+                        : 'border-gray-200 focus:border-blue-500'
+                    }
+                           disabled:opacity-50 disabled:cursor-not-allowed`}
+                  placeholder='Ex: 50 000'
+                  disabled={loading}
+                />
+
+              </div>
+
+              {/* Message d'erreur */}
+              {errors.budget_total && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className='text-red-500 text-sm mt-1 ml-1'
+                >
+                  {errors.budget_total.message}
+                </motion.p>
+              )}
+
+            </div>
+
+            <div>
+
+              <label className='text-sm font-semibold text-gray-700 mb-2 block ml-1'>
+                Devise <span className='text-red-500'>*</span>
+              </label>
+              <div className='relative'>
+
+                <select name="" id=""
+                  {...register('devise')}
+                  value={devises[0]}
+                  className={` px-5 py-4 bg-gray-50 border-2 rounded-xl 
+                            focus:outline-none focus:bg-white 
+                            transition-all duration-300
+                            ${errors.budget_total
+                      ? 'border-red-500 focus:border-red-500'
+                      : watchedFields.budget_total
+                        ? 'border-green-500 focus:border-green-500'
+                        : 'border-gray-200 focus:border-blue-500'
+                    }
+                            disabled:opacity-50 disabled:cursor-not-allowed`}
+                  placeholder='Ex: 50 000'
+                  disabled={loading}>
+
+                  {devises.map((devise) => (
+                    <option value={devise.code}>{devise.nom}</option>
+                  ))}
+
+                </select>
+
+                {/* Message d'erreur */}
+                {errors.devise && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className='text-red-500 text-sm mt-1 ml-1'
+                  >
+                    {errors.devise.message}
+                  </motion.p>
+                )}
+              </div>
+
             </div>
           </div>
 

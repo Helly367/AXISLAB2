@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { Close, Save, Flag, Description, CalendarToday, Category } from "@mui/icons-material";
 import { useJalon } from '../../../../hooks/useJalon';
 import { motion } from 'framer-motion';
+import { alertService } from '../../../../Services/alertService';
+import { styleChamps, verifieChamps, formateDateChamps } from '../../../../Services/functions';
 
 const AddJalon = ({ isOpen, onClose, phases, project }) => {
     const { ajouteJalon } = useJalon();
@@ -11,8 +13,9 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
     const {
         register,
         handleSubmit,
-        formState: { errors },
-        reset
+        formState: { errors, isDirty },
+        reset,
+        watch
     } = useForm({
         defaultValues: {
             title: '',
@@ -38,17 +41,23 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
         }
     }, [isOpen, reset]);
 
-    const formatDate = (date) => {
-        if (!date) return '';
-        return new Date(date).toISOString().split('T')[0];
-    };
+
+
+    const watchedFields = watch();
+    const style = styleChamps();
 
     const onSubmit = async (data) => {
+
+        if (!isDirty) {
+            alertService.info("Aucune modification trouvée");
+            setLoading(false);
+        }
+
         setLoading(true);
 
         const formattedData = {
             ...data,
-            date: formatDate(data.date),
+            date: formateDateChamps(data.date),
             phase_id: Number(data.phase_id),
             projet_id: Number(project.projet_id)
         };
@@ -72,6 +81,7 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
 
     const handleClose = () => {
         reset();
+        setLoading(false);
         onClose();
     };
 
@@ -81,10 +91,10 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
 
     return (
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex justify-between items-center">
-                    <h2 className="text-xl text-white font-bold">Ajouter un jalon</h2>
+                <div className="bg-primary p-2 flex justify-between items-center">
+                    <h2 className="text-2xd text-white font-bold">Ajouter un jalon</h2>
                     <button onClick={handleClose} className="text-white hover:bg-blue-700 p-1 rounded-full">
                         <Close />
                     </button>
@@ -100,10 +110,15 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
                         <input
                             type="text"
                             {...register('title', { required: 'Le titre est requis' })}
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.title ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('title').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'title')} `}
                             placeholder="Ex: Validation du cahier des charges"
                         />
                         {errors.title && (
@@ -119,10 +134,15 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
                         <textarea
                             {...register('description', { required: 'La description est requise' })}
                             rows="3"
-                            className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.description ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={120} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 120) {
+                                    e.target.value = e.target.value.slice(0, 120);
+                                }
+                                // mettre à jour React Hook Form
+                                register('title').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'description')} `}
                             placeholder="Description du jalon..."
                         />
                         {errors.description && (
@@ -139,10 +159,8 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
                             <input
                                 type="date"
                                 {...register('date', { required: 'La date est requise' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.date ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'date')} `}
                             />
                             {errors.date && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date.message}</p>
@@ -156,10 +174,10 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
                             </label>
                             <select
                                 {...register('phase_id', { required: 'La phase est requise' })}
-                                className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                    focus:outline-none focus:bg-white focus:border-blue-500
-                                    transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${errors.phaseId ? 'border-red-500' : 'border-gray-300'
-                                    }`}>
+                                maxLength={80} // limite stricte
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'phase_id')} `}>
+
                                 <option value="">Sélectionnez</option>
                                 {phases.map(phase => (
                                     <option key={phase.phase_id} value={phase.phase_id}>
@@ -179,9 +197,8 @@ const AddJalon = ({ isOpen, onClose, phases, project }) => {
                         </label>
                         <select
                             {...register('type')}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'type')} `}>
                             <option value="validation">Validation</option>
                             <option value="revue">Revue</option>
                             <option value="livrable">Livrable</option>

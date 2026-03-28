@@ -3,13 +3,15 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { Close, Save, Person, Work, Email, School, Wc, Phone } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { useMembres } from '../../../hooks/useMembers';
+import { styleChamps, verifieChamps } from '../../../Services/functions';
+import { alertService } from '../../../Services/alertService';
 
 const AjouterMembre = ({ isOpen, onClose, project }) => {
     const [loading, setLoading] = useState(false)
     const { createMembre } = useMembres();
 
-    const { register, control, handleSubmit, formState: { errors }, reset } = useForm({
-        defaultValues: {
+    const { register, control, handleSubmit, formState: { errors, isDirty }, reset, watch } = useForm({
+        defaultValues: {  
             nomComplet: '',
             poste: '',
             role: '',
@@ -55,20 +57,31 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
 
     const handleClose = () => {
         reset();
+        setLoading(false);
         onClose();
     };
+
+    const watchedFields = watch();
+    const style = styleChamps();
 
 
 
     const onSubmit = async (data) => {
+
+        if (!isDirty) {
+            alertService.info("Aucune modification détectée")
+        }
         setLoading(true);
 
         try {
             const newMember = {
                 ...data,
-                project_id: project.projet_id,
+                projet_id: project.projet_id,
                 competences: (data.competences || []).map(m => m.trim()).filter(Boolean)
             };
+
+            console.log(newMember);
+
 
             await new Promise(resolve => setTimeout(resolve, 3000));
             const result = await createMembre(newMember);
@@ -100,8 +113,8 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
                 {/* Header */}
-                <div className="bg-primary p-4 flex justify-between items-center sticky top-0">
-                    <h2 className="text-xl text-white font-bold">
+                <div className="bg-primary p-2 flex justify-between items-center sticky top-0">
+                    <h2 className="text-2xd text-white font-bold">
                         Ajouter un membre
                     </h2>
 
@@ -127,9 +140,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                                 required: 'Le nom est requis',
                                 minLength: { value: 2, message: 'Minimum 2 caractères' }
                             })}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('nomComplet').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'nomComplet')} `}
                             placeholder="Ex: Helly vibe's"
                         />
 
@@ -148,9 +167,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                         <input
                             type="text"
                             {...register('poste', { required: 'Le poste est requis' })}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('poste').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'poste')} `}
                             placeholder="Chef projet, Dev..."
                         />
 
@@ -169,9 +194,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                         <input
                             type="text"
                             {...register('role', { required: 'Le rôle est requis' })}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('role').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'role')} `}
                         />
                         {errors.role && (
                             <p className="text-red-500 text-sm">{errors.role.message}</p>
@@ -195,9 +226,8 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                                 {...register('sexe',
                                     { required: 'Veuillez selectionnez un sexe' }
                                 )}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'sexe')} `}
                                 placeholder='Ex: 0991631180 '
                             >
                                 <option value="Homme">Homme</option>
@@ -224,9 +254,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                                 {...register('telephone',
                                     { required: 'Le numéro de téléphone est requis' }
                                 )}
-                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                maxLength={12} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 12) {
+                                        e.target.value = e.target.value.slice(0, 12);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('telephone').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'telephone')} `}
                                 placeholder='Ex: 0991631180 '
                             />
 
@@ -248,9 +284,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                             type="email"
                             {...register('email',
                                 { required: "L'email de téléphone est requis" })}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            maxLength={120} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 120) {
+                                    e.target.value = e.target.value.slice(0, 120);
+                                }
+                                // mettre à jour React Hook Form
+                                register('email').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'email')} `}
                             placeholder='Ex: hellyvibes@gmail.com'
                         />
 
@@ -272,9 +314,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                             {...register('niveau_etude',
                                 { required: "Veuillez renseignez le niveau d'étude" }
                             )}
-                            className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                focus:outline-none focus:bg-white focus:border-blue-500
-                                transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('niveau_etude').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'niveau_etude')} `}
                             placeholder='Ex: hellyvibes@gmail.com'
                         />
 
@@ -299,9 +347,15 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                                     {...register(`competences.${index}`, {
                                         required: 'Compétence requise'
                                     })}
-                                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
-                                        focus:outline-none focus:bg-white focus:border-blue-500
-                                        transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    maxLength={80} // limite stricte
+                                    onChange={(e) => {
+                                        if (e.target.value.length > 80) {
+                                            e.target.value = e.target.value.slice(0, 80);
+                                        }
+                                        // mettre à jour React Hook Form
+                                        register(`competences.${index}`).onChange(e)
+                                    }}
+                                    className={`${style} ${verifieChamps(errors, watchedFields, `competences.${index}`)} `}
                                 />
 
                                 {fields.length > 1 && (

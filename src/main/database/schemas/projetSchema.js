@@ -3,12 +3,11 @@ import Joi from 'joi';
    SCHEMA JOI
 ================================ */
 
- export const projectSchema = Joi.object({
+ const getSchema = Joi.object({
 
   nom_projet: Joi.string()
     .min(2)
-    .max(100)
-    .required(),
+    .max(100),
 
   description: Joi.string()
     .allow(null, "")
@@ -21,8 +20,7 @@ import Joi from 'joi';
       "suspendu",
       "termine",
       "abandonne"
-    )
-    .required(),
+    ),
 
   prospects_cibles: Joi.alternatives()
     .try(
@@ -93,6 +91,24 @@ import Joi from 'joi';
   chef_projet: Joi.string().allow(null, "").optional(),
   objectif_court_terme: Joi.string().allow(null, "").optional(),
   objectif_long_terme: Joi.string().allow(null, "").optional(),
-  type_projet: Joi.string().allow(null, "").optional()
+  type_projet: Joi.string().allow(null, "").optional(),
+  
+  budget_total: Joi.number().positive(),
+  devise: Joi.string().valid("USD", "EUR", "CDF", "XOF", "GBP"),
+  taux_conversion : Joi.number().positive().default(1)
 
-}).unknown(false);
+ }).unknown(true);
+
+// Fonction utilitaire
+export  const projetSchema = (isCreate) => {
+  if (isCreate) {
+    return getSchema.fork(
+      ['nom_projet', 'description', 'budget_total' , 'devise', 'taux_conversion'],
+      (field) => field.required());
+  }
+  return getSchema; 
+};
+
+
+ 
+ 

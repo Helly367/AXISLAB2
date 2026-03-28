@@ -9,7 +9,8 @@ import DetailsMembre from './DetailsMembre';
 import DeleteConfirm from '../../widjets/DeleteConfirm';
 
 const EquipeList = ({ project }) => {
-    const { membres, deleteMembre } = useMembres();
+    const { membres, deleteMembre, setMembres } = useMembres();
+    const [loading, setLoading] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -52,6 +53,9 @@ const EquipeList = ({ project }) => {
     const handleDeleteClick = (member) => {
         setMemberToEdit(member);
         setOpenDelete(true);
+
+        console.log(memberToEdit);
+
     };
 
     const handleEditClick = (member) => {
@@ -59,10 +63,7 @@ const EquipeList = ({ project }) => {
         setIsEditModalOpen(true);
     };
 
-    const handleHistoryClick = (member) => {
-        setSelectedMember(member);
-        setIsHistoryModalOpen(true);
-    };
+
 
     const handleDetailsClick = (member) => {
         setMemberToEdit(member);
@@ -74,26 +75,50 @@ const EquipeList = ({ project }) => {
         setMemberToEdit(null); // Réinitialisation importante
     };
 
-    const handleConfirmDelete = async () => {
-        if (memberToEdit?.membre_id) {
-            await deleteMembre(memberToEdit.membre_id);
+
+
+    const handlerConfirm = async () => {
+        setLoading(true);
+
+        const membre_id = memberToEdit.membre_id;
+        const projet_id = project.projet_id;
+
+        console.log("membre_id", membre_id);
+        console.log("projet_id", projet_id);
+
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        const result = await deleteMembre(projet_id, membre_id);
+        console.log(result);
+
+        if (!result.success) {
+            console.error(result.error || result.errors);
+            setLoading(false);
+            return;
         }
+
+        setMembres(result.data);
         setOpenDelete(false);
         setMemberToEdit(null);
-    };
+        handleClose();
+    }
+
+    const handleClose = () => {
+        setLoading(false);
+        setOpenDelete(false);
+    }
 
     /* ===============================
        FILTERED MEMBERS (MEMOIZED ⭐)
     =============================== */
     const filteredMembers = useMemo(() => {
-        return membres.filter(member => {
+        return membres?.filter(member => {
             if (!member) return false;
-            if (filter !== 'all' && member.disponibilite < parseInt(filter))
-                return false;
+
             if (searchTerm) {
                 const search = searchTerm.toLowerCase();
                 return (
-                    member.nom?.toLowerCase().includes(search) ||
+                    member.nomComplet?.toLowerCase().includes(search) ||
                     member.poste?.toLowerCase().includes(search)
                 );
             }
@@ -106,15 +131,24 @@ const EquipeList = ({ project }) => {
     =============================== */
     const renderContent = () => {
         return (
-            <div className="space-y-6">
+            <div className="space-y-4">
                 {/* Search + Filter */}
-                <div className="bg-white rounded-lg shadow-md p-4 flex flex-wrap gap-4">
+                <div className="w-full flex bg-white rounded-lg shadow-md p-4  gap-4">
                     <input
                         type="text"
                         placeholder="Rechercher un membre..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="flex-1 p-2 border-2 border-gray-300 rounded-md"
+                        maxLength={80} // limite stricte
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value)
+                            if (e.target.value.length > 80) {
+                                e.target.value = e.target.value.slice(0, 80);
+                            }
+
+                        }}
+                        className={`w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                     />
                     <button
                         onClick={() => setIsAddModalOpen(true)}
@@ -124,68 +158,85 @@ const EquipeList = ({ project }) => {
                     </button>
                 </div>
 
-                {/* Grid */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredMembers.map(member => {
-                        if (!member) return null;
-                        return (
-                            <div key={member.membre_id}
-                                className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center gpa-6 justify-between">
-                                {/* Avatar */}
-                                <div className='flex flex-col w-full gap-4 items-center justify-center '>
-                                    <div className={`${getAvatarColor(member.nomComplet)} w-24 h-24 rounded-full items-center justify-center flex`}>
-                                        <h3 className="text-white text-2xl font-bold">
-                                            {getInitials(entente(member.nomComplet))}
-                                        </h3>
+
+
+                {filteredMembers.length === 0 ? (
+                    <div className='w-full items-center justify-center bg-white py-16  rounded-lg shadow-md'>
+                        <div className="text-center ">
+                            <p className="text-gray-500 text-lg font-medium">
+                                Aucun membre ne correspond a cette recherche
+                            </p>
+                            <p className="text-sm text-gray-400 mt-2">
+                                « Veuillez réessayez. »
+                            </p>
+
+                        </div>
+                    </div>
+                ) : (
+                    < div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredMembers.map(member => {
+
+                            if (!member) return null;
+                            return (
+                                <div key={member.membre_id}
+                                    className="bg-white rounded-lg shadow-md p-6 flex flex-col items-center gpa-6 justify-between">
+                                    {/* Avatar */}
+                                    <div className='flex flex-col w-full gap-4 items-center justify-center '>
+                                        <div className={`${getAvatarColor(member.nomComplet)} w-24 h-24 rounded-full items-center justify-center flex`}>
+                                            <h3 className="text-white text-2xl font-bold">
+                                                {getInitials(entente(member.nomComplet))}
+                                            </h3>
+                                        </div>
+
+                                        <div className='flex flex-col items-center'>
+                                            <h3 className="text-xl font-bold flex items-center justify-center">
+                                                {entente(member.nomComplet)}
+                                            </h3>
+                                            <span className="text-blue-600 flex items-center justify-center">
+                                                {entente(member.poste)}
+                                            </span>
+                                            <span className="text-gray-500 text-sm flex items-center justify-center">
+                                                {entente(member.role)}
+                                            </span>
+                                        </div>
                                     </div>
 
-                                    <div className='flex flex-col items-center'>
-                                        <h3 className="text-xl font-bold flex items-center justify-center">
-                                            {entente(member.nomComplet)}
-                                        </h3>
-                                        <span className="text-blue-600 flex items-center justify-center">
-                                            {entente(member.poste)}
-                                        </span>
-                                        <span className="text-gray-500 text-sm flex items-center justify-center">
-                                            {entente(member.role)}
-                                        </span>
+                                    <div className="flex gap-3 mt-8 self-end">
+
+                                        <button
+                                            onClick={() => handleEditClick(member)}
+                                            className="p-2 bg-blue-100 text-blue-600 rounded-full"
+                                            title='modifier les informations'
+                                        >
+                                            <Edit fontSize="small" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDetailsClick(member)}
+                                            className="p-2 bg-red-100 text-red-600 rounded-full"
+                                            title='voir plus'
+                                        >
+                                            <More fontSize="small" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteClick(member)}
+                                            className="p-2 bg-red-100 text-red-600 rounded-full"
+                                            title='supprimer ce membre'
+                                        >
+                                            <Delete fontSize="small" />
+                                        </button>
                                     </div>
                                 </div>
+                            );
+                        })}
+                        </div>
+                )}
 
-                                <div className="flex gap-3 mt-8 self-end">
-
-                                    <button
-                                        onClick={() => handleEditClick(member)}
-                                        className="p-2 bg-blue-100 text-blue-600 rounded-full"
-                                        title='modifier les informations'
-                                    >
-                                        <Edit fontSize="small" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDetailsClick(member)}
-                                        className="p-2 bg-red-100 text-red-600 rounded-full"
-                                        title='voir plus'
-                                    >
-                                        <More fontSize="small" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteClick(member)}
-                                        className="p-2 bg-red-100 text-red-600 rounded-full"
-                                        title='supprimer ce membre'
-                                    >
-                                        <Delete fontSize="small" />
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
             </div>
         );
     };
 
     return (
-        <div className="w-full">
+        <div className="w-full mt-4">
             {/* Message si aucun membre */}
             {(!membres || membres.length === 0) && (
                 <div className="text-center py-16 bg-white rounded-lg shadow-md">
@@ -230,16 +281,24 @@ const EquipeList = ({ project }) => {
                 entente={entente}
             />
 
-
-            {/* DeleteConfirm avec condition de rendu */}
-            {openDelete && memberToEdit && (
+            {openDelete && (
                 <DeleteConfirm
-                    title={`Voulez-vous vraiment supprimer ${memberToEdit.nomComplet} ?`}
+                    message={`Voulez-vous vraiment supprimer le membre ${memberToEdit?.nomComplet}`}
                     open={openDelete}
-                    onClose={handleCloseDelete}
-                    onConfirm={handleConfirmDelete}
+                    onClose={() => setOpenDelete(false)}
+                    element={memberToEdit}
+                    elementId={memberToEdit?.membre_id}
+                    projet_id={project?.projet_id}
+                    onConfirm={() => handlerConfirm()}
+                    loading={loading}
                 />
+
             )}
+
+
+
+
+
         </div>
     );
 };

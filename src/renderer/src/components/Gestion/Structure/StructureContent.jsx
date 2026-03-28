@@ -8,8 +8,9 @@ import ModalEditPhase from './Phases/EditPhase';
 import EnterpriseGantt from './Gantt/GanttDiagram';
 import DependenciesManager from './DependenciesManager';
 import JalonContnent from './Jalons/JalonContent';
-
 import { usePhases } from '../../../hooks/usePhase';
+import { useBudgets } from "../../../hooks/useBudgets"
+import { alertService } from '../../../Services/alertService';
 
 const StructureContent = ({ project }) => {
 
@@ -22,6 +23,10 @@ const StructureContent = ({ project }) => {
     ============================= */
 
     const { phases } = usePhases();
+    const { budget, setBudget } = useBudgets();
+
+    if (!budget) return null;
+    if (!phases) return null;
 
     const [dependencies, setDependencies] = useState([]);
     const [jalons, setJalons] = useState([]);
@@ -49,6 +54,20 @@ const StructureContent = ({ project }) => {
         setPhaseToEdit(phase);
         setIsEditModalOpen(true);
     };
+
+
+    const verifiyBudget = () => {
+
+        if (budget?.budget_restant === 0) {
+            alertService.warning(`Votre budget est insuffisant pour créer une nouvelle phase. Restant: ${budget.budget_restant} ${budget.devise}`);
+            setIsCreateModalOpen(false);
+            return null;
+
+        }
+
+        setIsCreateModalOpen(true);
+
+    }
 
     /* =============================
        DEPENDENCY CHECKER
@@ -102,14 +121,14 @@ const StructureContent = ({ project }) => {
 
                 {/* HEADER */}
 
-                <div className="bg-primary rounded-lg shadow-md p-4 flex justify-between items-center mb-4">
+                <div className="bg-primary rounded-lg shadow-md p-1.5 px-2 flex justify-between items-center ">
 
-                    <h1 className="text-xl text-white font-bold">
+                    <h1 className="text-2xd text-white font-bold">
                         Structure du projet
                     </h1>
 
                     <button
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={() => verifiyBudget()}
                         className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition-all flex items-center gap-2 shadow-md"
                     >
                         <AddCircle />
@@ -120,7 +139,7 @@ const StructureContent = ({ project }) => {
 
                 {/* NAVIGATION */}
 
-                <div className="bg-white rounded-lg shadow-md p-2 mb-4 flex gap-2">
+                <div className="bg-white rounded-lg shadow-md p-2  flex gap-2 mt-3 mb-3">
 
                     {navigation.map((nav) => (
 
@@ -141,9 +160,7 @@ const StructureContent = ({ project }) => {
                 <Routes>
 
                     {/* ROUTE PAR DEFAUT */}
-                    <Route
-                        index
-                        element={<Navigate to="phase" replace />}
+                    <Route index element={<Navigate to="phase" replace />}
                     />
 
                     <Route
@@ -164,11 +181,13 @@ const StructureContent = ({ project }) => {
                         element={
                             <PhaseItem
                                 phases={phases}
+                                devise={budget.devise}
                                 onBack={handleBack}
                                 onEdit={handleOpenEditModal}
                                 jalons={jalons.filter(
                                     m => m.Number(phaseId) === Number(phase_id)
                                 )}
+                                project={project}
                                
                             />
                         }
@@ -206,6 +225,8 @@ const StructureContent = ({ project }) => {
                     isOpen={isCreateModalOpen}
                     onClose={() => setIsCreateModalOpen(false)}
                     project={project}
+                    budget={budget}
+                    setBudget={setBudget}
                 />
 
                 {/* MODAL EDIT */}
@@ -218,6 +239,8 @@ const StructureContent = ({ project }) => {
                     }}
                     onSave={handleEditPhase}
                     phaseToEdit={phaseToEdit}
+                    project={project}
+                    budget={budget}
                 />
 
             </div>

@@ -29,18 +29,18 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
             className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden"
         >
             {/* Barre de couleur latérale */}
-            <div className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-primary to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+            <div className={`absolute left-0 top-0 h-full w-1 bg-linear-to-b from-primary to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
             <div className="p-4 pl-5">
                 <div className="flex items-start gap-3">
-                    <div className={`p-2.5 rounded-lg bg-gradient-to-br from-primary/10 to-blue-50`}>
+                    <div className={`p-2.5 rounded-lg bg-linear-to-br from-primary/10 to-blue-50`}>
                         <Icon className={`text-primary`} fontSize="small" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
                             {label}
                         </p>
-                        <p className="text-sm font-semibold text-gray-800 break-words">
+                        <p className="text-sm font-semibold text-gray-800 wrap-break-word">
                             {value || 'Non renseigné'}
                         </p>
                     </div>
@@ -50,7 +50,7 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
     );
 
     const CompetenceBadge = ({ competence }) => (
-        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gradient-to-r from-primary/10 to-blue-50 text-primary border border-primary/20 shadow-sm">
+        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-linear-to-r from-primary/10 to-blue-50 text-primary border border-primary/20 shadow-sm">
             {competence}
         </span>
     );
@@ -58,10 +58,8 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
     const renderContent = () => {
         if (isOpen) {
             if (!memberToEdit) return (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
+                <div
+                    className='fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4'
                 >
                     <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center">
                         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -76,58 +74,45 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
                             Fermer
                         </button>
                     </div>
-                </motion.div>
+                </div>
             );
 
             return (
                 <AnimatePresence>
                     {isOpen && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className='fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+                        <div
+                            className='fixed inset-0 bg-opacity backdrop-blur-sm flex items-center justify-center z-50 p-4'
                             onClick={onClose}
                         >
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                                transition={{ type: "spring", duration: 0.5 }}
+                            <div
+
                                 key={memberToEdit.membre_id}
                                 className="bg-white shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Header avec gradient */}
-                                <div className="sticky top-0 z-10 bg-gradient-to-r from-primary to-blue-600 p-6 flex justify-between items-center">
-                                    <div>
-                                        <h3 className='text-2xl text-white font-bold tracking-tight'>
-                                            Profil du membre
-                                        </h3>
-                                        <p className='text-white/80 text-sm mt-1'>
-                                            Informations détaillées
-                                        </p>
-                                    </div>
-                                    <motion.button
-                                        whileHover={{ scale: 1.1, rotate: 90 }}
-                                        whileTap={{ scale: 0.9 }}
+                                <div className="sticky top-0 z-10 bg-primary py-2 px-4 flex justify-between items-center">
+                                    <h3 className='text-2xd text-white font-bold tracking-tight'>
+                                        Profil du membre
+                                    </h3>
+                                    <button
                                         onClick={onClose}
-                                        className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors text-white"
+                                        className='text-white hover:bg-blue-600 rounded-full p-1'
                                     >
-                                        <Close fontSize="small" />
-                                    </motion.button>
+                                        <Close fontSize="medium" />
+                                    </button>
+
                                 </div>
 
                                 <div className='p-6 space-y-6'>
                                     {/* Section Avatar et identité */}
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.1 }}
+                                    <div
+
                                         className='flex flex-col sm:flex-row gap-6 items-center sm:items-start'
                                     >
                                         <div className='relative'>
-                                            <div className={`${getAvatarColor(memberToEdit.nomComplet)} w-28 h-28 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white`}>
+
+                                            <div className={`${getAvatarColor(memberToEdit.nomComplet)} w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg ring-4 ring-white`}>
                                                 <h3 className="text-white text-3xl font-bold">
                                                     {getInitials(entente(memberToEdit.nomComplet))}
                                                 </h3>
@@ -152,7 +137,7 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
                                                 Membre depuis {formateDate(memberToEdit.created_at)}
                                             </p>
                                         </div>
-                                    </motion.div>
+                                    </div>
 
                                     {/* Grille d'informations */}
                                     <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -183,10 +168,10 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.3 }}
-                                        className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-100"
+                                        className="bg-linear-to-br from-gray-50 to-white rounded-xl p-5 border border-gray-100"
                                     >
                                         <div className="flex items-center gap-2 mb-4">
-                                            <div className="p-2 bg-gradient-to-br from-primary/10 to-blue-50 rounded-lg">
+                                            <div className="p-2 bg-linear-to-br from-primary/10 to-blue-50 rounded-lg">
                                                 <Star className="text-primary" fontSize="small" />
                                             </div>
                                             <h4 className="font-semibold text-gray-800">Compétences</h4>
@@ -206,28 +191,9 @@ const DetailsMembre = ({ isOpen, onClose, memberToEdit, getAvatarColor, getIniti
                                         </div>
                                     </motion.div>
 
-                                    {/* Footer avec actions */}
-                                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={onClose}
-                                            className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
-                                        >
-                                            Fermer
-                                        </motion.button>
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className="px-6 py-2.5 bg-gradient-to-r from-primary to-blue-600 text-white rounded-xl hover:shadow-lg transition-all font-medium flex items-center gap-2"
-                                        >
-                                            <Edit fontSize="small" />
-                                            Modifier
-                                        </motion.button>
-                                    </div>
                                 </div>
-                            </motion.div>
-                        </motion.div>
+                            </div>
+                        </div>
                     )}
                 </AnimatePresence>
             );

@@ -6,7 +6,7 @@ import React, {
     useCallback,
     useMemo
 } from 'react';
-import { alertService } from '../functions/alertService';
+import { alertService } from '../Services/alertService';
 
 
 const PhasesContext = createContext();
@@ -26,7 +26,6 @@ export const PhaseProvider = ({ children }) => {
             setLoading(true);
 
             const result = await window.api.getPhases();
-
             if (result.success) {
                 setPhases(result.data || []);
                 setError(null);
@@ -63,6 +62,9 @@ export const PhaseProvider = ({ children }) => {
 
             const result = await window.api.createPhase(phaseData);
 
+            console.log("result", result);
+
+
 
             if (!result) {
                 throw new Error("Aucune réponse du backend");
@@ -73,8 +75,8 @@ export const PhaseProvider = ({ children }) => {
             }
 
             // Optimisation : on ajoute sans reload complet
-            setPhases(prev => [...prev, result.data]);
-            alertService.success(`La Phase ${result.data.title} a été créer avec succès !`)
+            setPhases(prev => [...prev, result.data.phase]);
+            alertService.success(`La Phase ${result.data.phase.title} a été créer avec succès !`)
 
             return { success: true, data: result.data };
 
@@ -90,9 +92,6 @@ export const PhaseProvider = ({ children }) => {
       UPDATE PHASE
    ========================== */
     const updatePhase = useCallback(async (phase_id, phaseData) => {
-        console.log("phase id", phase_id);
-        console.log("phaseData ", phaseData);
-
 
         try {
             const result = await window.api.updatePhase(phase_id, phaseData);
@@ -106,26 +105,33 @@ export const PhaseProvider = ({ children }) => {
                 throw new Error(result.error || "Erreur inconnue");
             }
 
+            const newPhaseData = result?.data.phase;
+            const newBudget = result?.data.budget;
+
             setPhases(prev =>
-                prev.map(p => p.phase_id === phase_id ? { ...p, ...phaseData } : p)
+                prev.map(p => p.phase_id === phase_id ? { ...p, ...newPhaseData } : p)
             );
-            alertService.success(`La Phase ${result.data.title} a été modifié avec succès !`)
-            return { success: true };
+
+            alertService.success(`La Phase ${newPhaseData.title} a été modifié avec succès !`)
+            return {
+                success: true,
+                data: newBudget
+            };
 
         } catch (err) {
             console.error("Erreur création:", err);
             alertService.handleBackendResponse(err.message || "Erreur lors de la création")
             return { success: false, error: err.message };
         }
-    });
+    }, []);
 
     /* =========================
     DELETE PHASE
  ========================== */
-    const deletePhase = useCallback(async (phase_id, phase) => {
+    const deletePhase = useCallback(async (projet_id, phase_id, phase) => {
         try {
 
-            const result = await window.api.deletePhase(phase_id);
+            const result = await window.api.deletePhase(projet_id, phase_id);
 
             if (!result?.success) {
                 throw new Error(result?.error || "Erreur inconnue");
@@ -161,7 +167,9 @@ export const PhaseProvider = ({ children }) => {
         error,
         createPhase,
         updatePhase,
-        deletePhase
+        deletePhase,
+        loadPhases
+
 
     }), [
         phases,
@@ -169,7 +177,9 @@ export const PhaseProvider = ({ children }) => {
         error,
         createPhase,
         updatePhase,
-        deletePhase
+        deletePhase,
+        loadPhases
+
     ]);
 
     return (

@@ -6,7 +6,7 @@ import React, {
     useCallback,
     useMemo
 } from 'react';
-import { alertService } from '../functions/alertService';
+import { alertService } from '../Services/alertService';
 
 
 const JalonContext = createContext();

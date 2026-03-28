@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, ArrowForward, Delete, Add, Warning } from "@mui/icons-material";
 import { usePhases } from "../../../hooks/usePhase";
-import { DependencyApi } from "../../../functions/dependency";
+import { DependencyApi } from "../../../Services/dependency";
 
 const DependenciesManager = ({ project }) => {
 
@@ -154,9 +154,7 @@ const DependenciesManager = ({ project }) => {
     };
 
     const getPhaseName = (id) => {
-
         const phase = phases.find((p) => p.phase_id === id);
-
         return phase ? phase.title : "Inconnue";
     };
 
@@ -174,11 +172,11 @@ const DependenciesManager = ({ project }) => {
                     Ajouter une dépendance
                 </h3>
 
-                <div className="flex flex-col md:flex-row items-end gap-4">
+                <div className="flex  items-center  gap-4 justify-between">
 
-                    <div className="flex-1">
+                    <div className="flex  flex-col items-center gap-2 w-full">
 
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                        <label className="block text-sm font-medium text-gray-600 self-start">
                             Phase antérieure
                         </label>
 
@@ -190,7 +188,9 @@ const DependenciesManager = ({ project }) => {
                                     from: e.target.value
                                 }))
                             }
-                            className="w-full p-3 border rounded-lg"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">Sélectionner</option>
 
@@ -207,11 +207,15 @@ const DependenciesManager = ({ project }) => {
                         </select>
                     </div>
 
-                    <ArrowForward />
+                    <div className="mt-5">
+                        <ArrowForward />
+                    </div>
 
-                    <div className="flex-1">
 
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
+
+                    <div className="flex  flex-col items-center gap-2 w-full">
+
+                        <label className="block text-sm font-medium text-gray-600 self-start">
                             Phase dépendante
                         </label>
 
@@ -223,7 +227,9 @@ const DependenciesManager = ({ project }) => {
                                     to: e.target.value
                                 }))
                             }
-                            className="w-full p-3 border rounded-lg"
+                            className="w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">Sélectionner</option>
 
@@ -242,7 +248,7 @@ const DependenciesManager = ({ project }) => {
 
                     <button
                         onClick={handleAddDependency}
-                        className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+                        className="bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 mt-5"
                     >
                         <Add /> Ajouter
                     </button>

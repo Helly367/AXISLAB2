@@ -1,10 +1,20 @@
 import { ipcMain } from 'electron';
-import {getAllProjects, getProjectById,createProject,updateProject,deleteProject} from './handlers/projectHandlers.js';
-import { createPhase, updatePhase, getAllPhases, getPhaseById,deletePhase } from './handlers/phaseHandlers.js';
+import {
+  getAllProjects,
+  getProjectById,
+  createProject,
+  updateProject,
+  deleteProject
+} from './handlers/projectHandlers.js';
+
 import { minimizeWindow, maximizeWindow, closeWindow } from './handlers/windowHandlers.js';
+import { createPhase, updatePhase, getAllPhases, getPhaseById,deletePhase } from './handlers/phaseHandlers.js';
 import { createDependency, getAllDependencies, getDependenciesByProject, deleteDependency } from './handlers/dependenciesHandlers.js';
 import { createJalon, getAllJalons, updateJalon, deletejalon } from './handlers/jalonHandlers.js';
 import { createMembre ,deleteMembre , getAllMembres ,getMembreById , updateMembre } from './handlers/membreHandlers.js';
+import { loadBudgets, convertionBudget, configureBudget } from "./handlers/budgetHandlers.js";
+import { createMateriel, loadAllMateriels} from "./handlers/materielHandlers.js";
+
 
 export function setupIpcHandlers() {
 
@@ -52,15 +62,15 @@ export function setupIpcHandlers() {
     return await getPhaseById(id);
   });
 
-  ipcMain.handle("phase-delete", async (_, phaseId) => {
-    return await deletePhase(phaseId);
+  ipcMain.handle("phase-delete", async (_,projet_id , phaseId) => {
+    return await deletePhase(projet_id , phaseId);
   });
   
   
 
-   /* ===============================
-     DEPENDENCES   HANDLERS
-  =============================== */
+//    /* ===============================
+//      DEPENDENCES   HANDLERS
+//   =============================== */
   ipcMain.handle("dependency-create", (_, data) =>
   createDependency(data)
 );
@@ -78,9 +88,9 @@ ipcMain.handle("dependency-delete", (_, id) =>
 );
   
   
-    /* ===============================
-     JALON HANDLERS
-  =============================== */
+//     /* ===============================
+//      JALON HANDLERS
+//   =============================== */
   ipcMain.handle("create-jalon", async (_, jalonData) => {
     return await createJalon(jalonData);
   });
@@ -98,37 +108,63 @@ ipcMain.handle("dependency-delete", (_, id) =>
   });
   
   
-   /* ===============================
-     MEMBRES HANDLERS
-  =============================== */
+//    /* ===============================
+//      MEMBRES HANDLERS
+//   =============================== */
   
   ipcMain.handle("membre-create", async(_, memberData) => {
      return await createMembre(memberData)
   });
   
-  ipcMain.handle("get-membres", async() => {
-    return await getAllMembres();
+  ipcMain.handle("get-membres", async(_,projet_id) => {
+    return await getAllMembres(projet_id);
   });
   
-  ipcMain.handle("membre-getById", async(_, membre_id) => {
+  ipcMain.handle("membre-getById", async(_, projet_id , memberData) => {
      return await getMembreById(membre_id)
   });
   
-  ipcMain.handle("membre-update", async(_,membre_id , memberData) => {
-     return await updateMembre(membre_id ,memberData)
+  ipcMain.handle("membre-update", async(_,projet_id , memberData) => {
+     return await updateMembre(projet_id ,memberData)
   });
   
-  ipcMain.handle("membre-delete", async(_,membre_id) => {
-     return await deleteMembre(membre_id)
+  ipcMain.handle("membre-delete", async(_,projet_id , membre_id) => {
+     return await deleteMembre(projet_id , membre_id)
   });
   
   
-  /* ===============================
-    BUDGET HANDLERS
-  =============================== */
-  ipcMain.handle("global-budget-create", async(_, budgetData) => {
-      return await createGlobalBudget(budgetData)    
+  // /* ===============================
+  //   BUDGET HANDLERS
+  // =============================== */
+ 
+  
+  ipcMain.handle('get-AllBudgets', async (_, project_id) => {
+    return await loadBudgets(project_id);
   });
+  
+  ipcMain.handle('convertion-budget', async (_, projet_id , budgetData) => {
+    return await convertionBudget(projet_id ,budgetData);
+   });
+  
+  ipcMain.handle('configure-budget', async (_, projet_id , budgetData) => {
+    return await configureBudget(projet_id ,budgetData);
+  });
+  
+  
+  // /* ===============================
+  //   MATERIELS HANDLERS
+  // =============================== */
+ 
+  
+  ipcMain.handle('get-AllMateriels', async (_, projet_id) => {
+    return await loadAllMateriels(projet_id);
+  });
+  
+  ipcMain.handle('ajouter-materiel', async (_, materielData) => {
+    return await createMateriel(materielData);
+   });
+  
+
 
   /* ===============================
      WINDOW HANDLERS
@@ -142,7 +178,4 @@ ipcMain.handle("dependency-delete", (_, id) =>
      TEST HANDLER
   =============================== */
 
-  ipcMain.handle('direBonjour', async (_, name) => {
-    return `Bonjour ${name}`;
-  });
 }

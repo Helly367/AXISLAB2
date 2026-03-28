@@ -1,60 +1,150 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-    Close, Save, Computer, Category,
-    AttachMoney, Description, Inventory,
-    Warning, Photo
+    Close, Save, Computer, Category, Numbers, AttachMoney, Description, Warning, Timeline,
+    Shop
 } from "@mui/icons-material";
+import { categorieMateriels } from '../../../Services/listes';
+import { usePhases } from "../../../hooks/usePhase";
+import { useMateriels } from '../../../hooks/useMateriels';
+import { styleChamps, verifieChamps, formateMontantSimple } from '../../../Services/functions';
+import { alertService } from '../../../Services/alertService';
+import { motion } from 'framer-motion';
 
-const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
+const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
 
     const [preview, setPreview] = useState("");
+    const { phases, loadPhases, setPhases } = usePhases();
+    const { createMateriel } = useMateriels();
+    const [loadingMembres, setLoadingMembres] = useState(false);
+    const [phaseId, setPhaseId] = useState(null);
+    const [budgetErreur, setBudgetErreur] = useState('');
+    const [isbudgetErreur, setISbudgetErreur] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const { register, handleSubmit, watch, formState: { errors }, reset } = useForm({
+    const PhasesDuProjet = useMemo(() => {
+        if (!phases || !project?.projet_id) return [];
+        return phases.filter(m => m.projet_id === project.projet_id);
+    }, [phases, project?.projet_id]);
+
+
+    const { register, handleSubmit, watch, formState: { errors, isDirty }, reset } = useForm({
         defaultValues: {
             nom: '',
-            categorie: 'informatique',
+            categorie: categorieMateriels[0],
             prix: '',
             quantite: 1,
-            statut: 'disponible',
             description: '',
-            photo: '',
-            fournisseur: ''
+            fournisseur: '',
+            phase_id: PhasesDuProjet[0].phase_id,
+            statut: 'en_attente',
         }
     });
 
+    // Charger les membres quand la modale s'ouvre
+    useEffect(() => {
+        if (isOpen && project?.projet_id) {
+            const fetchMembres = async () => {
+                setLoadingMembres(true);
+                await loadPhases();
+                setLoadingMembres(false);
+                setISbudgetErreur(false);
+                reset();
+                setLoading(false);
+            };
+            fetchMembres();
+        }
+    }, [isOpen, project?.projet_id, loadPhases]);
+
+
     const watchPrix = watch('prix', 0);
     const watchQuantite = watch('quantite', 1);
+    const watchedFields = watch();
+    const style = styleChamps();
 
+
+    const filterBudgetPhase = useMemo(() => {
+        if (!phases || !phaseId) return null;
+        const phase = phases.find(m => Number(m.phase_id) === Number(phaseId));
+        return phase;
+
+    }, [phases, phaseId])
+
+    const devise = budget?.devise;
+    const budget_restant = Number(filterBudgetPhase?.budget_restant);
     const totalEstime = Number(watchPrix || 0) * Number(watchQuantite || 1);
 
-    const onSubmit = (data) => {
+    const handleClose = () => {
+        setLoading(false);
+        reset();
+        onClose();
 
-        if (totalEstime > budgetRestant) {
-            alert(`Budget insuffisant ! Il manque ${(totalEstime - budgetRestant).toLocaleString()} FCFA`);
-            return;
+    }
+
+    const statusVal = [
+        "attente",
+        "disponible",
+        "suspendu"
+    ]
+
+
+    const onSubmit = async (data) => {
+
+        if (!isDirty) {
+            alertService.info("Aucune modification détectée")
         }
 
-        const photoFile = data.photo?.[0];
+        if (totalEstime > budget_restant) {
+            setISbudgetErreur(true);
+            setBudgetErreur(`Le prix du materiel ${formateMontantSimple(totalEstime)} ${devise} depasse le budget de la phase ${formateMontantSimple(budget_restant)} ${devise}`);
+            setLoading(false);
+        }
 
-        const photoUrl = photoFile
-            ? URL.createObjectURL(photoFile)
-            : preview;
+        setLoading(true);
+        try {
+            const newMateriel = {
+                ...data,
+                projet_id: project?.projet_id,
+                prix: Number(data.prix),
+                quantite: Number(data.quantite),
+                fournisseur: data.fournisseur || 'non defini',
+                statut: 'en_attente',
 
-        const newMateriel = {
-            ...data,
-            prix: Number(data.prix),
-            quantite: Number(data.quantite),
-            photo: photoUrl,
-            dateAjout: new Date().toISOString()
-        };
 
-        onSave(newMateriel);
+            };
 
-        reset();
-        setPreview("");
-        onClose();
+            console.log(newMateriel);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            const result = await createMateriel(newMateriel);
+
+
+
+            if (!result || !result.success) {
+                setISbudgetErreur(true);
+                setBudgetErreur(result?.error || result?.errors || "Erreur inconnue")
+                console.error(result?.error || result?.errors || "Erreur inconnue");
+                setLoading(false); // ← Important : arrêter le loading même en cas d'erreur
+                return;
+            }
+
+            setPhases(result.data);
+
+            setLoading(false);
+            handleClose();
+
+        } catch (error) {
+            console.error("Erreur inattendue:", error);
+            setLoading(false); // ← Arrêter le loading en cas d'exception
+        }
+
+
+
+
+
     };
+
+
+
 
     if (!isOpen) return null;
 
@@ -64,13 +154,13 @@ const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
                 {/* Header */}
-                <div className="bg-primary p-4 flex justify-between items-center sticky top-0">
-                    <h2 className="text-xl text-white font-bold">
+                <div className="bg-primary p-2 flex justify-between items-center sticky top-0">
+                    <h2 className="text-2xd text-white font-bold">
                         Ajouter un matériel
                     </h2>
 
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="text-white hover:bg-blue-700 p-1 rounded-full transition-colors">
                         <Close />
                     </button>
@@ -78,25 +168,7 @@ const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
 
-                    {/* Budget restant */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex justify-between items-center">
-                            <span className="font-medium text-blue-800">Budget restant:</span>
-                            <span className="text-xl font-bold text-blue-600">
-                                {budgetRestant.toLocaleString()} FCFA
-                            </span>
-                        </div>
 
-                        {totalEstime > 0 && (
-                            <div className="mt-2 flex justify-between items-center text-sm">
-                                <span className="text-gray-600">Total estimation:</span>
-                                <span className={`font-bold ${totalEstime > budgetRestant ? 'text-red-600' : 'text-green-600'}`}>
-                                    {totalEstime.toLocaleString()} FCFA
-                                    {totalEstime > budgetRestant && ' (dépassement)'}
-                                </span>
-                            </div>
-                        )}
-                    </div>
 
                     {/* Nom */}
                     <div>
@@ -111,7 +183,16 @@ const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
                                 required: 'Le nom est requis',
                                 minLength: { value: 2, message: 'Minimum 2 caractères' }
                             })}
-                            className="w-full p-3 border-2 border-gray-300 rounded-md"
+                            placeholder='Ex: Ordinateur portable HP'
+                            maxLength={80} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 80) {
+                                    e.target.value = e.target.value.slice(0, 80);
+                                }
+                                // mettre à jour React Hook Form
+                                register('nom').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'nom')} `}
                         />
 
                         {errors.nom && (
@@ -128,87 +209,204 @@ const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
 
                         <select
                             {...register('categorie')}
-                            className="w-full p-3 border-2 border-gray-300 rounded-md">
-                            <option value="informatique">Informatique</option>
-                            <option value="bureau">Mobilier de bureau</option>
-                            <option value="reseau">Réseau</option>
-                            <option value="logiciel">Logiciel</option>
-                            <option value="securite">Sécurité</option>
-                            <option value="autre">Autre</option>
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'categorie')} `}
+                        >
+                            {categorieMateriels.map((categorie) => (
+                                <option key={categorie} value={categorie}>{categorie}</option>
+                            ))}
                         </select>
+                    </div>
+
+
+
+                    {/* Description */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <Description className="inline mr-2 text-blue-600" />
+                            Description
+                        </label>
+
+                        <textarea
+                            {...register('description')}
+                            rows="3"
+                            maxLength={120} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 120) {
+                                    e.target.value = e.target.value.slice(0, 120);
+                                }
+                                // mettre à jour React Hook Form
+                                register('description').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'description')} `}
+                            placeholder="Description du matériel..."
+                        />
+
+
+                    </div>
+
+                    {/* Nom */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <Shop className="inline mr-2 text-blue-600" />
+                            Fornisseur ou lieu d'achat
+                        </label>
+
+                        <input
+                            type="text"
+                            {...register('fournisseur', {
+
+                            })}
+                            placeholder='Ex: Centre commercial'
+                            maxLength={100} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 100) {
+                                    e.target.value = e.target.value.slice(0, 100);
+                                }
+                                // mettre à jour React Hook Form
+                                register('fournisseur').onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, 'fournisseur')} `}
+                        />
+
+                        {errors.fournisseur && (
+                            <p className="text-red-500 text-sm mt-1">{errors.fournisseur.message}</p>
+                        )}
+                    </div>
+
+
+
+                    {/* Phases - Version avec sélection ET possibilité d'ajouter */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <Timeline className="inline mr-2 text-blue-600" />
+                            Veuillez sélectionner une phase pour ce matériel
+                        </label>
+
+                        {loadingMembres ? (
+                            <div className="text-center py-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                <p className="text-gray-500 mt-2">Chargement des membres...</p>
+                            </div>
+                        ) : PhasesDuProjet.length === 0 ? (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                                <p className="text-yellow-700 text-lg font-medium mb-3">
+                                    Aucun membre dans ce projet
+                                </p>
+                                <p className="text-sm text-yellow-600 mb-4">
+                                    Vous devez d'abord ajouter des membres à l'équipe avant de pouvoir les assigner à une phase.
+                                </p>
+                                <button
+                                    type="button"
+
+                                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
+                                >
+                                    <PersonAdd /> Ajouter une phase maintenant
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="space-y-2">
+
+                                    <select
+                                        {...register('phase_id')}
+                                        onChange={(e) => setPhaseId(e.target.value)}
+                                        className={`${style} ${verifieChamps(errors, watchedFields, "phase_id")} `}
+                                    >
+                                        {PhasesDuProjet.map(phase => (
+                                            <option key={phase.phase_id} value={phase.phase_id}>
+                                                {phase.title}
+                                            </option>
+                                        ))}
+                                    </select>
+
+
+                                </div>
+
+
+                            </>
+                        )}
                     </div>
 
                     {/* Prix + Quantité */}
                     <div className="grid grid-cols-2 gap-4">
 
-                        <input
-                            type="number"
-                            placeholder="Prix unitaire FCFA"
-                            {...register('prix')}
-                            className="p-3 border-2 border-gray-300 rounded-md"
-                        />
-
-                        <input
-                            type="number"
-                            placeholder="Quantité"
-                            {...register('quantite')}
-                            className="p-3 border-2 border-gray-300 rounded-md"
-                        />
-                    </div>
-
-                    {/* Photo */}
-                    <div className="flex flex-col gap-3">
-
-                        <label className="text-sm font-medium">
-                            <Photo className="inline mr-2 text-primary" />
-                            Photo (optionnel)
-                        </label>
-
-                        <div className="flex items-center gap-6 self-center">
-
-                            <img
-                                src={preview || "https://via.placeholder.com/150"}
-                                alt="preview"
-                                className="w-40 h-40 rounded-full border object-cover"
-                            />
-
-                            <label
-                                htmlFor="photo"
-                                className="bg-blue-600 p-2 rounded-xl text-white cursor-pointer">
-                                Sélectionner une photo
+                        <div className='flex flex-col'>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <AttachMoney className="inline mr-2 text-blue-600" />
+                                Prix
                             </label>
 
                             <input
-                                id="photo"
-                                type="file"
-                                className="hidden"
-                                accept="image/*"
-                                {...register('photo')}
+                                type="number"
+                                placeholder="Ex: 986000"
+                                {...register('prix')}
+                                maxLength={16} // limite stricte
                                 onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        setPreview(URL.createObjectURL(file));
+                                    if (e.target.value.length > 16) {
+                                        e.target.value = e.target.value.slice(0, 16);
                                     }
+                                    // mettre à jour React Hook Form
+                                    register('prix').onChange(e)
                                 }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'prix')} `}
                             />
+
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <Numbers className="inline mr-2 text-blue-600" />
+                                Quantité
+                            </label>
+
+                            <input
+                                type="number"
+                                placeholder="Quantité"
+                                {...register('quantite')}
+                                maxLength={16} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 16) {
+                                        e.target.value = e.target.value.slice(0, 16);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register('quantite').onChange(e)
+                                }}
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'quantite')} `}
+                            />
+
+                        </div>
+
                     </div>
 
-                    {/* Description */}
-                    <textarea
-                        {...register('description')}
-                        rows="3"
-                        className="w-full p-3 border-2 border-gray-300 rounded-md"
-                        placeholder="Description du matériel..."
-                    />
+                    {phaseId && (
+                        <div className='flex items-center gap-4 text-sm'>
+                            <div className='flex items-center gap-2'>
+                                <span className='text-gray-600 font-medium'>Prix total :</span>
+                                <span className='font-medium text-orange-600'>
+                                    {formateMontantSimple(totalEstime)} {devise}
+                                </span>
+                            </div>
+                            <span className='text-gray-500'>|</span>
+                            <div className='flex items-center gap-2'>
+                                <span className='text-gray-600 font-medium'>Budget phase : </span>
+                                <span className='font-medium text-green-600'>
+                                    {formateMontantSimple(filterBudgetPhase?.budget_restant)} {devise}
+                                </span>
 
-                    {/* Alert budget */}
-                    {totalEstime > budgetRestant && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2 text-red-700">
-                            <Warning />
-                            Budget insuffisant
+                            </div>
                         </div>
                     )}
+
+                    {/* Alert budget */}
+                    {isbudgetErreur && (
+                        <div className="p-4 m-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className='text-2xd text-red-700 font-medium'>
+                                {budgetErreur}
+                            </p>
+
+                        </div>
+                    )}
+
 
                     {/* Buttons */}
                     <div className="flex justify-end gap-3 border-t pt-4">
@@ -220,15 +418,30 @@ const AjouterMateriel = ({ isOpen, onClose, onSave, budgetRestant }) => {
                             Annuler
                         </button>
 
-                        <button
+                        <motion.button
                             type="submit"
-                            disabled={totalEstime > budgetRestant}
-                            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${totalEstime > budgetRestant
-                                ? 'bg-gray-300 text-gray-500'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}>
-                            <Save /> Ajouter
-                        </button>
+                            disabled={loading || Object.keys(errors).length > 0}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                        >
+
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Ajout en cours ...
+                                </>
+                            ) : (
+                                <>
+                                    <Save /> Ajouter
+
+                                </>
+                            )}
+
+                        </motion.button>
 
                     </div>
 

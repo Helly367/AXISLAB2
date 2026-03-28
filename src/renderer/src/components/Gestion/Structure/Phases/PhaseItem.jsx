@@ -3,6 +3,8 @@ import { ArrowBack, Person, CalendarToday, Edit, Delete } from "@mui/icons-mater
 import { useParams } from 'react-router-dom';
 import DeleteConfirm from '../../../widjets/DeleteConfirm';
 import { usePhases } from '../../../../hooks/usePhase';
+import { formateMontantSimple } from '../../../../Services/functions';
+import { useBudgets } from '../../../../hooks/useBudgets';
 
 const formatDate = (date) => {
     if (!date) return "-";
@@ -28,10 +30,12 @@ const generateNiceColor = () => {
 
 
 
-const PhaseItem = ({ phases = [], onBack, onEdit }) => {
+const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
+    const { budget, setBudget } = useBudgets();
     const { phase_id } = useParams();
     const [openDelete, setOpenDelete] = useState(false);
     const { deletePhase } = usePhases();
+    const [loading, setLoading] = useState(false);
 
     const color = useMemo(() => generateNiceColor(), []);
 
@@ -41,11 +45,34 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
     );
 
 
+    const handlerConfirm = async () => {
+        setLoading(true);
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        const result = await deletePhase(project?.projet_id, phase_id, phase);
+        console.log(result);
+
+        if (!result.success) {
+            console.error(result.error || result.errors);
+            setLoading(false);
+            return;
+        }
+
+        setBudget(result.data.updatedBudget);
+        handleClose();
+    }
+
+    const handleClose = () => {
+        setLoading(false);
+        setOpenDelete(false);
+    }
+
+
     if (!phase) {
         return (
-            <div className="text-center py-10">
-                <p className="text-red-500 text-2xl font-bold">Phase non trouvée</p>
-                <button onClick={onBack} className="text-blue mt-4 font-medium bg-opacity-10 hover:bg-opacity-20 transition-colors px-4 py-2 rounded-lg">
+            <div className="text-center py-10 bg-white rounded-xl ">
+                <p className="text-red-500 text-2xl font-bold">Phase non trouvée ou supprimée</p>
+                <button onClick={onBack} className="text-blue mt-4 font-medium bg-gray-400 text-white transition-colors px-6 py-2 rounded-lg">
                     Retour
                 </button>
             </div>
@@ -61,17 +88,28 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
         <div className="bg-white rounded-lg shadow-md p-8 mb-6">
 
             {/* Header */}
-            <div className="flex items-center gap-4 pb-6 border-b-2 border-gray-200 mb-6">
-                <button
-                    onClick={onBack}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                    <ArrowBack />
-                </button>
+            <div className="flex items-center  justify-between gap-4 pb-4 border-b-2 border-gray-200 mb-6">
+                <div className='flex items-center gap-3'>
+                    <button
+                        onClick={onBack}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <ArrowBack />
+                    </button>
 
-                <h2 className="text-3xl font-bold text-gray-800">
-                    {phase.title || "Sans titre"}
-                </h2>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                        {phase.title || "Sans titre"}
+                    </h2>
+
+                </div>
+
+                <div className='flex items-center gap-3'>
+                    <span className='text-2xd text-gray-600 font-medium'>Budget pour cette phase : </span>
+                    <span className='text-2xd text-primary font-medium '>
+                        {formateMontantSimple(phase.budget_phase)} {devise}
+                    </span>
+                </div>
+
             </div>
 
             {/* Description */}
@@ -174,13 +212,17 @@ const PhaseItem = ({ phases = [], onBack, onEdit }) => {
             </div>
 
             <DeleteConfirm
-                title={`Voulez-vous vraiment supprimer la phase ${phase.title}`}
+                message={`Voulez-vous vraiment supprimer la phase ${phase.title}`}
                 open={openDelete}
                 onClose={() => setOpenDelete(false)}
-                onConfirm={() => {
-                    deletePhase(phase_id, phase);
-                    setOpenDelete(false);
-                }} />
+                element={phase}
+                elementId={phase_id}
+                projet_id={project?.projet_id}
+                onConfirm={() => handlerConfirm()}
+                loading={loading}
+            />
+
+
         </div>
     );
 };

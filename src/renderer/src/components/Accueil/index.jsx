@@ -8,12 +8,16 @@ const Accueil = ({ setProject }) => {
     const navigate = useNavigate();
     const { createProject } = useProjects();
 
-
     const handleCreate = async (data) => {
         const result = await createProject(data);
 
+        if (!result) {
+            console.log(result);
+
+        }
+
         if (result.success) {
-            navigate(`/dashboard/${result.data.id}`);
+            navigate(`/dashboard/${result.data.Projet_id}`);
         }
 
         return result;

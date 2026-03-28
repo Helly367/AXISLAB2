@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { getPhaseWidth, getPositionX } from "../../../../functions/layout";
+import { getPhaseWidth, getPositionX } from "../../../../Services/layout";
 
 const PhaseBar = ({ phase, index, scale, isCritical, conflicts = [], onPhaseClick }) => {
 

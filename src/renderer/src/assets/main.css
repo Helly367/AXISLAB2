@@ -6,8 +6,11 @@
   --color-gris-anthracite: #1f2937;
   --color-gris-sombre: rgba(94, 93, 93, 0.658);
   --color-flou : rgba(0, 0, 0, 0.493) ;
-
+  
+  --text-2xd: 16px;
+    --text-xd: 12px;
 }
+
 
 /* Largeur de la scrollbar */
 ::-webkit-scrollbar {
@@ -48,3 +51,4 @@
 .animate-fadeIn {
   animation: fadeIn 0.2s ease;
 }
+/* Style personnalisé pour tous les radio buttons du formulaire */

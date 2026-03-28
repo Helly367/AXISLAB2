@@ -22,7 +22,7 @@ const DashboardContent = ({ project }) => {
                 <Route path="structure/*" element={<StructureContent project={project} />} />
                 <Route path="equipe/*" element={<EquipeContnent project={project} />} />
                 <Route path="Budget/*" element={<BudgetContent project={project} />} />
-                <Route path="Matériels/*" element={<MaterielContent project={project} />} />
+                <Route path="materiels/*" element={<MaterielContent project={project} />} />
 
 
                 <Route path="*" element={<Navigate to="profile" replace />} />

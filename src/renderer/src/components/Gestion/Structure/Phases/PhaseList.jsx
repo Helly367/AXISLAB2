@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Code, CalendarToday } from "@mui/icons-material";
+import { Code, CalendarToday, AttachMoney } from "@mui/icons-material";
+import { mettreEnMajuscule, formatMontant, limiteTexte } from "../../../../Services/functions";
 
 const formatDate = (date) => {
     if (!date) return "-";
@@ -39,12 +40,12 @@ const PhaseList = ({ phases = [], onViewPhase }) => {
                         <Code />
                     </div>
 
-                    <h3 className="text-2xl text-blue font-bold mb-3">
-                        {phase.title || "Sans titre"}
+                    <h3 className="text-xl text-blue font-bold mb-3">
+                        {limiteTexte(mettreEnMajuscule(phase.title), 30) || "Sans titre"}
                     </h3>
 
                     <p className="text-gray-600 mb-4 line-clamp-3">
-                        {phase.description_phase || "Pas de description"}
+                        {limiteTexte(phase.description_phase, 150) || "Pas de description"}
                     </p>
 
                     <div className="flex flex-col gap-2 mb-4 text-sm">
@@ -62,6 +63,15 @@ const PhaseList = ({ phases = [], onViewPhase }) => {
                             <span className="font-medium">Fin:</span>
                             <span className="text-red-600">
                                 {formatDate(phase.date_fin)}
+                            </span>
+                        </div>
+
+
+                        <div className="flex items-center gap-2">
+                            <AttachMoney className="text-orange-600 text-sm" />
+                            <span className="font-medium">Budget :</span>
+                            <span className="text-orange-600 font-bold">
+                                {formatMontant(phase.budget_phase)}
                             </span>
                         </div>
 

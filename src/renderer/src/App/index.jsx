@@ -5,6 +5,7 @@ import { PhaseProvider } from "../hooks/usePhase";
 import { JalonProvider } from "../hooks/useJalon";
 import { MembresProvider } from "../hooks/useMembers";
 import { BudgetsProvider } from "../hooks/useBudgets";
+import { MaterielProvider } from "../hooks/useMateriels";
 import Accueil from "../components/Accueil";
 import Dashboard from "../components/Dashboard/Dashboard";
 import OpenProject from "../components/widjets/OpenProject";
@@ -48,6 +49,7 @@ export default function App() {
       <BudgetsProvider>
         <MembresProvider>
           <PhaseProvider>
+            <MaterielProvider>
             <JalonProvider>
               <TitleBar />
               <ToastContainer />
@@ -55,6 +57,7 @@ export default function App() {
                 <AppContent />
               </BrowserRouter>
             </JalonProvider>
+            </MaterielProvider>
           </PhaseProvider>
         </MembresProvider>
       </BudgetsProvider>
