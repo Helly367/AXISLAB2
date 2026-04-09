@@ -168,7 +168,8 @@ export const PhaseProvider = ({ children }) => {
         createPhase,
         updatePhase,
         deletePhase,
-        loadPhases
+        loadPhases,
+        setPhases
 
 
     }), [
@@ -178,7 +179,8 @@ export const PhaseProvider = ({ children }) => {
         createPhase,
         updatePhase,
         deletePhase,
-        loadPhases
+        loadPhases,
+        setPhases
 
     ]);
 

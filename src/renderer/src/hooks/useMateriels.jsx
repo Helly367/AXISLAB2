@@ -118,73 +118,83 @@ export const MaterielProvider = ({ children }) => {
 
 
     //     /* =========================
-    //       UPDATE PHASE
+    //       UPDATE Materiel
     //    ========================== */
-    //     const updatePhase = useCallback(async (phase_id, phaseData) => {
+    const updateMateriel = useCallback(async (projet_id, materielData) => {
 
-    //         try {
-    //             const result = await window.api.updatePhase(phase_id, phaseData);
-    //             console.log(result);
 
-    //             if (!result) {
-    //                 throw new Error("Aucune réponse du backend");
-    //             }
+        try {
+            const result = await window.api.updateMateriel(projet_id, materielData);
+            console.log(result);
 
-    //             if (!result.success) {
-    //                 throw new Error(result.error || "Erreur inconnue");
-    //             }
+            if (!result) {
+                throw new Error("Aucune réponse du backend");
+            }
 
-    //             const newPhaseData = result?.data.phase;
-    //             const newBudget = result?.data.budget;
+            if (!result.success) {
+                throw new Error(result.error || "Erreur inconnue");
+            }
 
-    //             setPhases(prev =>
-    //                 prev.map(p => p.phase_id === phase_id ? { ...p, ...newPhaseData } : p)
-    //             );
+            const materiel_id = materielData.materiel_id;
+            const materielDataFont = result?.data.materiel;
+            const phase = result?.data.phase;
 
-    //             alertService.success(`La Phase ${newPhaseData.title} a été modifié avec succès !`)
-    //             return {
-    //                 success: true,
-    //                 data: newBudget
-    //             };
+            setMateriels(prev =>
+                prev.map(m => m.materiel_id === materiel_id ? { ...m, ...materielDataFont } : m)
+            );
 
-    //         } catch (err) {
-    //             console.error("Erreur création:", err);
-    //             alertService.handleBackendResponse(err.message || "Erreur lors de la création")
-    //             return { success: false, error: err.message };
-    //         }
-    //     }, []);
+            alertService.success(`Modification effectuer avec succès !`)
+            return {
+                success: true,
+                data: phase
+            };
+
+        } catch (err) {
+            console.error("Erreur création:", err);
+            alertService.handleBackendResponse(err.message || "Erreur lors de la création")
+            return { success: false, error: err.message };
+        }
+    }, []);
 
     //     /* =========================
-    //     DELETE PHASE
+    //     DELETE Materiel
     //  ========================== */
-    //     const deletePhase = useCallback(async (projet_id, phase_id, phase) => {
-    //         try {
+    const deleteMateriel = useCallback(async (projet_id, materielId, phase_id) => {
+        try {
 
-    //             const result = await window.api.deletePhase(projet_id, phase_id);
+            const result = await window.api.deleteMateriel(projet_id, materielId, phase_id);
 
-    //             if (!result?.success) {
-    //                 throw new Error(result?.error || "Erreur inconnue");
-    //             }
+            if (!result?.success) {
+                throw new Error(result?.error || "Erreur inconnue");
+            }
 
-    //             setPhases(prev =>
-    //                 prev.filter(p =>
-    //                     Number(p.phase_id) !== Number(result.data.phase_id)
-    //                 )
-    //             );
+            const materiel_id = result.data.materiel_id;
+            const materiel = result.data.materiel;
+            const phase = result.data.phase;
 
-    //             alertService.success(
-    //                 `La Phase ${phase?.title || ""} a été supprimée avec succès !`
-    //             );
 
-    //             return result;
+            setMateriels(prev =>
+                prev.filter(p =>
+                    Number(p.materiel_id) !== Number(materiel_id)
+                )
+            );
 
-    //         } catch (err) {
-    //             console.error("Erreur suppression:", err);
-    //             alertService.error("Erreur lors de la suppression");
+            alertService.success(
+                `Materiel supprimé avec succès !`
+            );
 
-    //             return { success: false, error: err.message };
-    //         }
-    //     }, []);
+            return {
+                success: true,
+                data: phase
+            };
+
+        } catch (err) {
+            console.error("Erreur suppression:", err);
+            alertService.error("Erreur lors de la suppression");
+
+            return { success: false, error: err.message };
+        }
+    }, []);
 
 
     /* =========================
@@ -195,8 +205,8 @@ export const MaterielProvider = ({ children }) => {
         loading,
         error,
         createMateriel,
-        // updatePhase,
-        // deletePhase,
+        updateMateriel,
+        deleteMateriel,
         loadAllMateriels
 
 
@@ -205,8 +215,8 @@ export const MaterielProvider = ({ children }) => {
         loading,
         error,
         createMateriel,
-        // updatePhase,
-        // deletePhase,
+        updateMateriel,
+        deleteMateriel,
         loadAllMateriels
 
     ]);

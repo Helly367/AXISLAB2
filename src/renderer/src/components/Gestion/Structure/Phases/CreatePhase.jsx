@@ -271,7 +271,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <Task className="inline mr-2 text-blue" />
-                            Tâches
+                            Tâches (facultative pour la création)
                         </label>
 
                         <div className="space-y-2">
@@ -315,7 +315,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <Group className="inline mr-2 text-blue" />
-                            Membres assignés à la phase
+                            Membres assignés à la phase (facultatif pour la création)
                         </label>
 
                         {loadingMembres ? (
@@ -405,7 +405,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                             <AttachMoney className="inline mr-2 text-blue" />
                             Budget de la phase /
                             <span className='text-orange-600 ml-3'>
-                                Budget du projet : {formateMontantSimple(budget.budget_total)} {budget.devise}
+                                Budget du projet : {formateMontantSimple(budget.budget_restant)} {budget.devise}
                             </span>
                         </label>
                         <input
@@ -455,7 +455,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                         >
                             {loading ? (
                                 <>

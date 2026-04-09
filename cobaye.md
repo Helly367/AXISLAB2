@@ -125,3 +125,64 @@ Mobilier écologique	Tables, chaises, bureaux durables	40 000
 Total estimatif : 500 000 €
 
 Si tu veux, je peux maintenant associer ce matériel à chaque étape du projet avec budget précis par étape pour un plan complet. Veux‑tu que je fasse ça ?
+
+
+
+Explication
+
+Cette ligne met à jour uniquement la phase modifiée dans le tableau phases.
+Décomposition
+javascript
+
+setPhases(prev => prev.map(p =>
+    Number(p.phase_id) === Number(result.data.phase_id)
+        ? { ...p, ...result.data }
+        : p
+));
+
+    setPhases(prev => ...)
+
+        Fonction de mise à jour qui reçoit l'état actuel prev
+
+    prev.map(p => ...)
+
+        Parcourt chaque phase p du tableau
+
+    Number(p.phase_id) === Number(result.data.phase_id)
+
+        Compare l'ID de la phase actuelle avec l'ID de la phase modifiée
+
+    ? { ...p, ...result.data }
+
+        Si les ID correspondent :
+
+            { ...p } : garde toutes les propriétés existantes
+
+            ...result.data : écrase avec les nouvelles valeurs de la phase mise à jour
+
+            Résultat : une phase fusionnée (anciennes + nouvelles données)
+
+    : p
+
+        Si les ID ne correspondent pas : garde la phase inchangée
+
+Exemple concret
+
+Avant :
+javascript
+
+phases = [
+  { phase_id: 1, title: "Phase A", budget_restant: 1000 },
+  { phase_id: 2, title: "Phase B", budget_restant: 800 }
+]
+
+Après modification de la phase 1 : result.data = { phase_id: 1, title: "Phase A", budget_restant: 800 }
+
+Résultat :
+javascript
+
+phases = [
+  { phase_id: 1, title: "Phase A", budget_restant: 800 },  // ✅ mise à jour
+  { phase_id: 2, title: "Phase B", budget_restant: 800 }   // inchangée
+]
+

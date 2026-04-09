@@ -22,12 +22,15 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
     const { register, handleSubmit, formState: { errors, isDirty }, reset, setValue, setError, watch, clearErrors } = useForm();
     const { updateProject } = useProjects();
     const [loading, setLoading] = useState(false)
+    const [isProspectChanged, setIsProspectChanged] = useState(false);
 
     // Fonction pour mettre à jour les données du projet
 
     // État local pour les prospects sélectionnés
     const [selectedProspects, setSelectedProspects] = useState([]);
     const watchedFields = watch()
+
+
 
     useEffect(() => {
         if (project) {
@@ -72,12 +75,16 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
 
     // Gérer la sélection/désélection des prospects
     const handleProspectToggle = (prospects_cibles) => {
+        setIsProspectChanged(true)
         setSelectedProspects(prev => {
             if (prev.includes(prospects_cibles)) {
                 return prev.filter(p => p !== prospects_cibles);
+
             } else {
+
                 return [...prev, prospects_cibles];
             }
+
         });
     };
 
@@ -85,6 +92,17 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
         if (!date) return '';
         return new Date(date).toISOString().split('T')[0];
     };
+
+    const isDirtyVerify = (prospectChanged, dirty) => {
+
+        if (!prospectChanged && !dirty) {
+            alertService.info("Aucune modification détectée");
+            setLoading(false);
+            return false;
+        }
+
+        return true;
+    }
 
     // Sélectionner tous les prospects
     const handleSelectAll = () => {
@@ -98,47 +116,61 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
     const style = styleChamps();
 
 
-
     const onSubmit = async (data) => {
 
-        if (!isDirty) {
-            alertService.info("Aucune modification détectée");
-            setLoading(false);
-            return;
+        const vf = isDirtyVerify(isProspectChanged, isDirty)
+
+        console.log("vf", vf);
+
+
+        if (!vf) {
+            return null;
         }
 
-        setLoading(true)
-        // Convertir les dates au format ISO
-        const formattedData = {
-            ...data,
-            prospects_cibles: selectedProspects
-        };
+        try {
 
-        // simulation chargement
-        await new Promise(resolve => setTimeout(resolve, 3000))
-        const response = await updateProject(project.projet_id, formattedData);
+            setLoading(true)
+            // Convertir les dates au format ISO
+            const formattedData = {
+                ...data,
+                prospects_cibles: selectedProspects
+            };
 
-        alertService.handleBackendResponse(response);
-        if (response.success) {
-            alertService.success("Projet modifié avec succès");
-            setLoading(false);
-            onClose();
-        } else {
-            if (!response.success) {
-                if (response.errors) {
-                    response.errors.forEach(err => {
-                        setError(err.field, {
-                            type: "manual",
-                            message: err.message
+            // simulation chargement
+            await new Promise(resolve => setTimeout(resolve, 3000))
+            const response = await updateProject(project.projet_id, formattedData);
+
+            alertService.handleBackendResponse(response);
+            if (response.success) {
+                alertService.success("Projet modifié avec succès");
+                setIsProspectChanged(false)
+                setLoading(false);
+                onClose();
+            } else {
+                if (!response.success) {
+                    if (response.errors) {
+                        response.errors.forEach(err => {
+                            setError(err.field, {
+                                type: "manual",
+                                message: err.message
+                            });
                         });
-                    });
+                    }
+                    return;
                 }
-                return;
+                setIsProspectChanged(false)
+                setLoading(false);
+
             }
+
+
+        } catch (error) {
+            console.log(error.message);
+            setIsProspectChanged(false)
             setLoading(false);
 
-        }
 
+        }
 
     };
 
@@ -217,8 +249,6 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             )}
                         </div>
                     </div>
-
-
 
                     {/* Dates du projet */}
                     <div className="grid grid-cols-2 gap-4">
@@ -497,7 +527,7 @@ const ProfileModify = ({ isOpen, onClose, project }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                         >
 
                             {loading ? (

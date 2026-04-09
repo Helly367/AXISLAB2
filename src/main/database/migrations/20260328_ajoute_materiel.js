@@ -22,7 +22,7 @@ export const up = function (knex) {
     table.text('description').nullable();
     table.decimal("prix", 16, 2).notNullable().defaultTo(0);
     table.integer("quantite").nullable().defaultTo(1);
-    table.text("statut").defaultTo("attente");
+    table.text("statut").defaultTo("en_attente");
     table.text("fournisseur").nullable().defaultTo('non defini');
       
       

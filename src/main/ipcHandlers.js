@@ -13,7 +13,7 @@ import { createDependency, getAllDependencies, getDependenciesByProject, deleteD
 import { createJalon, getAllJalons, updateJalon, deletejalon } from './handlers/jalonHandlers.js';
 import { createMembre ,deleteMembre , getAllMembres ,getMembreById , updateMembre } from './handlers/membreHandlers.js';
 import { loadBudgets, convertionBudget, configureBudget } from "./handlers/budgetHandlers.js";
-import { createMateriel, loadAllMateriels} from "./handlers/materielHandlers.js";
+import { createMateriel, loadAllMateriels , updateMateriel , deleteMateriel} from "./handlers/materielHandlers.js";
 
 
 export function setupIpcHandlers() {
@@ -162,7 +162,15 @@ ipcMain.handle("dependency-delete", (_, id) =>
   
   ipcMain.handle('ajouter-materiel', async (_, materielData) => {
     return await createMateriel(materielData);
-   });
+  });
+  
+  ipcMain.handle('update-materiel', async (_,projet_id , materielData) => {
+    return await updateMateriel(projet_id , materielData);
+  })
+  
+  ipcMain.handle('delete-materiel', async (_, projet_id, materiel_id, phase_id) => {
+    return await deleteMateriel(projet_id, materiel_id, phase_id);
+  });
   
 
 

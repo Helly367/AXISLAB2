@@ -22,7 +22,9 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
     const [isdepassement, setIsDepassement] = useState(false);
     const [loadingMembres, setLoadingMembres] = useState(false);
     const [isAddMembreModalOpen, setIsAddMembreModalOpen] = useState(false); // ✅ AJOUTÉ
-    const { register, control, handleSubmit, formState: { errors, isDirty }, watch, reset } = useForm({
+    const [isTachesError, setIsTachesError] = useState(false);
+    const [tachesError, setTachesError] = useState('');
+    const { register, control, handleSubmit, formState: { errors, isDirty }, watch, reset, setError } = useForm({
         defaultValues: {
             title: '',
             description_phase: '',
@@ -34,9 +36,9 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
         }
     });
 
-    const { fields: tacheFields, append: appendTache, remove: removeTache } = useFieldArray({
+    const { fields: tacheFields, append: appendTache, remove: removeTache, } = useFieldArray({
         control,
-        name: 'taches'
+        name: 'taches',
     });
 
     const { fields: membreFields, append: appendMembre, remove: removeMembre } = useFieldArray({
@@ -72,6 +74,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
             fetchMembres();
             setErreurDepassement("");
             setIsDepassement(false);
+            setIsTachesError(false);
             setLoading(false);
         }
     }, [isOpen, project?.projet_id, loadMembres]);
@@ -93,11 +96,27 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
 
     const onSubmit = async (data) => {
 
-        if (!isDirty) {
+        // Vérifier s'il y a au moins une tâche remplie
+        const hasTache = data.taches.some(t => t && t.trim() !== '');
+
+        // Vérifier modification OU tâche
+        if (!isDirty && !hasTache) {
             alertService.info("Aucune modification détectée");
             setLoading(false);
             return;
         }
+
+        // Si aucune tâche → erreur
+        if (!hasTache) {
+            setIsTachesError(true);
+            setTachesError("Ajoute au moins une tâche");
+            setLoading(false);
+            return;
+        }
+
+        setIsTachesError(false);
+        setTachesError('');
+        console.log("OK on envoie :", data);
 
         setLoading(true);
 
@@ -265,7 +284,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <Task className="inline mr-2 text-blue" />
-                            Tâches
+                            Tâches (facultative)
                         </label>
 
                         <div className="space-y-2">
@@ -294,6 +313,8 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                                     )}
                                 </div>
                             ))}
+
+
                         </div>
 
                         <button
@@ -302,7 +323,14 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                             className="mt-2 text-blue hover:text-blue-800 text-sm font-medium">
                             + Ajouter une tâche
                         </button>
+
+                        {isTachesError && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {tachesError}
+                            </p>
+                        )}
                     </div>
+
 
                     {/* Membres */}
                     <div>

@@ -451,7 +451,7 @@ const ConfigBudget = ({ isOpen, onClose, project }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                         >
                             {loading ? (
                                 <>

@@ -29,33 +29,6 @@ export  const materielSchema = (isCreate) => {
 };
 
 
-export const normalizePhaseDataUpdate = (phaseData , projet_id) => {
-    if (!phaseData) {
-        console.error("phaseData est undefined");
-        return null;
-    }
-
-    return { 
-        projet_id: projet_id,
-        // Champs optionnels - garder la valeur existante si non fournie
-        title: phaseData.title,
-        description_phase: phaseData.description_phase,
-        date_debut: phaseData.date_debut,
-        date_fin: phaseData.date_fin,
-        budget_phase: phaseData.budget_phase !== undefined ? Number(phaseData.budget_phase) : undefined,
-        status: phaseData.status,
-        
-        // Tableaux
-        taches: phaseData.taches !== undefined 
-            ? (Array.isArray(phaseData.taches) ? phaseData.taches : [])
-            : undefined,
-        membres: phaseData.membres !== undefined
-            ? (Array.isArray(phaseData.membres) ? phaseData.membres : [])
-            : undefined,
-        
-    };
-};
-
 
 export function normalizeMaterielData(data) {
      if (!data) {

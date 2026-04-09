@@ -16,7 +16,7 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
     const [preview, setPreview] = useState("");
     const { phases, loadPhases, setPhases } = usePhases();
     const { createMateriel } = useMateriels();
-    const [loadingMembres, setLoadingMembres] = useState(false);
+    const [loadingPhases, setLoadingPhases] = useState(false);
     const [phaseId, setPhaseId] = useState(null);
     const [budgetErreur, setBudgetErreur] = useState('');
     const [isbudgetErreur, setISbudgetErreur] = useState(false);
@@ -24,7 +24,7 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
 
     const PhasesDuProjet = useMemo(() => {
         if (!phases || !project?.projet_id) return [];
-        return phases.filter(m => m.projet_id === project.projet_id);
+        return phases.filter(m => m?.projet_id === project.projet_id);
     }, [phases, project?.projet_id]);
 
 
@@ -36,7 +36,7 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
             quantite: 1,
             description: '',
             fournisseur: '',
-            phase_id: PhasesDuProjet[0].phase_id,
+            phase_id: PhasesDuProjet[0]?.phase_id,
             statut: 'en_attente',
         }
     });
@@ -44,15 +44,15 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
     // Charger les membres quand la modale s'ouvre
     useEffect(() => {
         if (isOpen && project?.projet_id) {
-            const fetchMembres = async () => {
-                setLoadingMembres(true);
+            const fetchPhases = async () => {
+                setLoadingPhases(true);
                 await loadPhases();
-                setLoadingMembres(false);
+                setLoadingPhases(false);
                 setISbudgetErreur(false);
                 reset();
                 setLoading(false);
             };
-            fetchMembres();
+            fetchPhases();
         }
     }, [isOpen, project?.projet_id, loadPhases]);
 
@@ -282,18 +282,18 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
                             Veuillez sélectionner une phase pour ce matériel
                         </label>
 
-                        {loadingMembres ? (
+                        {loadingPhases ? (
                             <div className="text-center py-4">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                                <p className="text-gray-500 mt-2">Chargement des membres...</p>
+                                <p className="text-gray-500 mt-2">Chargement des phases...</p>
                             </div>
                         ) : PhasesDuProjet.length === 0 ? (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                                 <p className="text-yellow-700 text-lg font-medium mb-3">
-                                    Aucun membre dans ce projet
+                                        Aucune phase disponible dans ce projet
                                 </p>
                                 <p className="text-sm text-yellow-600 mb-4">
-                                    Vous devez d'abord ajouter des membres à l'équipe avant de pouvoir les assigner à une phase.
+                                        Vous devez d'abord ajouter des phases dans ce projet.
                                 </p>
                                 <button
                                     type="button"

@@ -125,138 +125,144 @@ export async function createMateriel(data) {
   }
 }
 
-// export async function updatePhase(projet_id, data) {
-//   try {
-//     const phase_id = data?.phase_id;
+export async function updateMateriel(projet_id, data) {
+  try {
+    const materiel_id = data.materiel_id;
+    const phase_id = data.phase_id;
     
-//     if (!projet_id) return { success: false, error: "projet_id est requis" };
-//     if (!phase_id) return { success: false, error: "phase_id est requis" };
-
-//     const existingPhase = await db("phases").where({ phase_id }).first();
-//     if (!existingPhase) return { success: false, error: "Phase introuvable" };
-
-//     const cleaned = normalizePhaseDataUpdate(data, projet_id);
-//     if (!cleaned) return { success: false, error: "Données invalides" };
-
-//     const validation = validateProject(cleaned, false);
-//     if (!validation.isValid) return { success: false, error: validation.errors };
-
-//     const updateData = {};
-//     for (const [key, value] of Object.entries(cleaned)) {
-//       if (value !== undefined && key !== 'phase_id' && key !== 'projet_id') {
-//         updateData[key] = (key === 'taches' || key === 'membres') ? JSON.stringify(value) : value;
-//       }
-//     }
-
-//     if (Object.keys(updateData).length === 0 && data.budget_phase === undefined) {
-//       return { success: true, data: { phase: formatPhase(existingPhase), budget: null } };
-//     }
-
-//     let budget_phase = updateData.budget_phase !== undefined ? Number(updateData.budget_phase) : undefined;
-//     let budgetUpdated = false;
-
-//     await db.transaction(async (trx) => {
-//       if (Object.keys(updateData).length > 0) {
-//         const updateFields = { ...updateData, updated_at: new Date() };
-//         if (budget_phase > 0) {
-//           updateFields.budget_phase = Number(existingPhase.budget_phase) + budget_phase;
-//           updateFields.budget_restant = Number(existingPhase.budget_restant) + budget_phase;
-//           budgetUpdated = true;
-//         }
-//         await trx("phases").where({ phase_id }).update(updateFields);
-//       }
-
-//       if (budgetUpdated && budget_phase > 0) {
-//         const budget = await trx("budgets").where({ projet_id: existingPhase.projet_id }).first();
-//         if (!budget) throw new Error("Budget du projet introuvable");
-
-//         const newBudgetRestant = Number(budget.budget_restant) - budget_phase;
-//         if (newBudgetRestant < 0) throw new Error(`Budget insuffisant. Restant: ${budget.budget_restant}`);
-
-//         await trx("budgets").where({ projet_id: existingPhase.projet_id }).update({
-//           budget_depense: Number(budget.budget_depense) + budget_phase,
-//           budget_restant: newBudgetRestant,
-//           updated_at: new Date()
-//         });
-//       }
-//     });
-
-//     const [updatedPhase, updatedBudget] = await Promise.all([
-//       db("phases").where({ phase_id }).first(),
-//       budgetUpdated ? db("budgets").where({ projet_id: existingPhase.projet_id }).first() : Promise.resolve(null)
-//     ]);
-
-//     return { success: true, data: { phase: formatPhase(updatedPhase), budget: updatedBudget } };
-//   } catch (error) {
-//     console.error("Erreur updatePhase:", error);
-//     return { success: false, error: error.message || "Erreur lors de la mise à jour de la phase" };
-//   }
-// }
-
-
-
-// export async function getPhaseById(id) {
-//   try {
-//     const phase = await db("phases").where({ phase_id: id }).first();
-//     if (!phase) return { success: false, error: "Phase non trouvée" };
-//     return { success: true, data: formatPhase(phase) };
-//   } catch (error) {
-//     return { success: false, error: error.message };
-//   }
-// }
-
-// export async function deletePhase(projet_id , phaseId) {
-//   try {
-    
-//     const phase = await db("phases").where({ phase_id: phaseId }).first();
-//     if (!phase) return { success: false, error: "Phase non trouvée" };
-//     const budget_phase = Number(phase.budget_phase);
-    
-//     await db.transaction(async (trx) => {
-      
-//       const budget = await trx("budgets").where({ projet_id }).first();
-//       if (!budget) return { success: false, error: "budget non trouvée" };
-      
-//       let budget_total = Number(budget.budget_total);
-//       let budget_depense = Number(budget.budget_depense);
+    if (!projet_id || !materiel_id || !phase_id) {
+      return {
+        success: false,
+        error: "projet_id, materiel_id et phase_id sont requis"
+      };
+    }
      
-//       budget_total += budget_phase;
-//       budget_depense -= budget_phase;
-//       let budget_restant = budget_total - budget_depense
+    const cleaned = normalizeMaterielData(data);
+    const validation = validateMateriel(cleaned, false);
+    if (!validation.isValid) return { success: false, error: validation.errors };
+
+    const validatedData = validation.value;
+    const newPrixMateriel = Number(validatedData.prix) * Number(validatedData.quantite || 1);
+    
+    const insertData = {
+      ...validatedData,
+      updated_at: new Date()
+    };
+    
+    await db.transaction(async (trx) => {
+      const materiel = await trx("materiels").where({ projet_id, materiel_id }).forUpdate().first();
+      const phase = await trx("phases").where({ projet_id, phase_id }).forUpdate().first();
+
+      if (!phase) throw new Error("phase introuvable");
+      if (!materiel) throw new Error("materiel introuvable");
+
+      const prixMaterielActuel = Number(materiel.prix) * Number(materiel.quantite || 0);
+      const difference = newPrixMateriel - prixMaterielActuel;
+
+      // Vérifier le budget uniquement si le nouveau prix est plus élevé
+      if (difference > 0 && difference > phase.budget_restant) {
+        throw new Error("Budget insuffisant pour cette modification");
+      }
+
+      // Mise à jour des budgets
+      const budget_restant = Number(phase.budget_restant) - difference;
+      const budget_consomme = Number(phase.budget_consomme) + difference;
+
+      await trx("materiels")
+        .where({ projet_id, materiel_id })
+        .update(insertData);
+
+      await trx("phases")
+        .where({ projet_id, phase_id })
+        .update({
+          budget_restant: budget_restant,
+          budget_consomme: budget_consomme,
+          updated_at: new Date()
+        });
+    });
+    
+    const [materiel, updatedPhase] = await Promise.all([
+      db("materiels").where({ projet_id, materiel_id }).first(),
+      db("phases").where({ projet_id, phase_id }).first()
+    ]);
+
+    return {
+      success: true,
+      data: {
+        materiel: formatMateriel(materiel),
+        phase: formatPhase(updatedPhase)
+      }
+    };
+
+  } catch (error) {
+    console.error("Erreur updateMateriel:", error);
+    return { success: false, error: error.message || "Erreur lors de la mise à jour du matériel" };
+  }
+}
+
+
+
+export async function getPhaseById(id) {
+  try {
+    const phase = await db("phases").where({ phase_id: id }).first();
+    if (!phase) return { success: false, error: "Phase non trouvée" };
+    return { success: true, data: formatPhase(phase) };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteMateriel(projet_id, materiel_id , phase_id) {
+  
+      if (!projet_id || !materiel_id || !phase_id) {
+      return {
+        success: false,
+        error: "projet_id , phase_id et materiel_id sont requis"
+      };
+    }
+  try {
+    
+    await db.transaction(async (trx) => {
       
-//       const updateBudget = {
-//         budget_total: budget_total,
-//         budget_depense: budget_depense,
-//         budget_restant : budget_restant
+      const materiel = await trx("materiels").where({ projet_id, materiel_id }).forUpdate().first();
+        const phase = await trx("phases").where({ projet_id, phase_id }).forUpdate().first();
+      
+        if (!materiel) throw new Error("materiel introuvable");
+        if (!phase) throw new Error("materiel phase");
+
+        const prixMaterielActuel = Number(materiel.prix) * Number(materiel.quantite || 0);
         
-//       }
-      
-//       await trx("budgets").where({ projet_id: projet_id })
-//         .update({
-//           ...updateBudget,
-//           updated_at: new Date()
-//         });
-      
-//       await trx("phases").where({ projet_id, phase_id : phaseId}).del();
-      
-//     });
+        // Mise à jour des budgets
+        const budget_restant = Number(phase.budget_restant) + prixMaterielActuel;
+        const budget_consomme = Number(phase.budget_consomme) + prixMaterielActuel;
+        
+        await trx("phases")
+            .where({ projet_id, phase_id })
+            .update({
+              budget_restant: budget_restant,
+              budget_consomme: budget_consomme,
+              updated_at: new Date()
+        });
+        
+        await trx("materiels").where({ projet_id, materiel_id }).del();
+    });
+
+
+    const [materiel, updatedPhase] = await Promise.all([
+      db("materiels").where({ projet_id, materiel_id }).first(),
+      db("phases").where({ projet_id, phase_id }).first()
+    ]);
+
     
-//      const [updatedPhase, updatedBudget] = await Promise.all([
-//        db("phases").where({ projet_id ,phase_id : phaseId }).first(),
-//        db("budgets").where({ projet_id }).first()
-//      ]);
-    
-    
-    
-//     return {
-//       success: true,
-//       data: {
-//         updatedPhase ,
-//         updatedBudget,
-//         phase_id : phaseId
-//       }
-//     };
-//   } catch (error) {
-//     return { success: false, error: error.message };
-//   }
-// }
+      return {
+        success: true,
+        data: {
+          materiel: materiel ,
+          phase: updatedPhase,
+          materiel_id : materiel_id
+        }
+      };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}

@@ -331,8 +331,8 @@ const ProfileContent = ({ project }) => {
                             <div className='pl-14'>
                                 <ul className='list-disc pl-5 space-y-1'>
                                     <ul className='list-disc pl-5 space-y-1'>
-                                        {Array.isArray(project?.prospects_cibles) && project.prospects_cibles.length > 0 ? (
-                                            project.prospects_cibles.map((prospect, index) => (
+                                        {Array.isArray(project?.prospects_cibles) && project?.prospects_cibles.length > 0 ? (
+                                            project?.prospects_cibles.map((prospect, index) => (
                                                 <li key={index} className='text-gray-700 text-2xd'>
                                                     {prospect}
                                                 </li>

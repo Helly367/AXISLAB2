@@ -215,9 +215,6 @@ const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
                 message={`Voulez-vous vraiment supprimer la phase ${phase.title}`}
                 open={openDelete}
                 onClose={() => setOpenDelete(false)}
-                element={phase}
-                elementId={phase_id}
-                projet_id={project?.projet_id}
                 onConfirm={() => handlerConfirm()}
                 loading={loading}
             />

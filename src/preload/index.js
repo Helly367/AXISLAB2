@@ -51,6 +51,8 @@ configureBudget: (projet_id , budgetData) => ipcRenderer.invoke('configure-budge
 //   // MATERIELS - CRUD complet 
 loadAllMateriels: (projet_id) => ipcRenderer.invoke('get-AllMateriels', projet_id),
 createMateriel: (materielData) => ipcRenderer.invoke('ajouter-materiel', materielData),
+updateMateriel: (projet_id, materielData) => ipcRenderer.invoke('update-materiel', projet_id, materielData),
+deleteMateriel: (projet_id , materiel_id, phase_id) => ipcRenderer.invoke('delete-materiel', projet_id , materiel_id , phase_id),
 
 
   
