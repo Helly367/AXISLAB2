@@ -29,6 +29,11 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
         }
     }, [isOpen, project?.projet_id, loadMembres]);
 
+    const membresDuProjet = useMemo(() => {
+        if (!membres || !project?.projet_id) return [];
+        return membres.filter(m => m.projet_id === project.projet_id);
+    }, [membres, project?.projet_id]);
+
     const {
         register,
         control,
@@ -124,7 +129,6 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
         const response = await createPhase(cleanedPhase);
         setBudget(response.data?.budget);
 
-        console.log("response", response);
 
         if (!response.success) {
             console.error(response.error || response.errors);
@@ -137,14 +141,6 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
     };
 
     const dateDebut = watch('date_debut');
-
-    // Filtrer les membres du projet en cours
-    const membresDuProjet = useMemo(() => {
-        if (!membres || !project?.projet_id) return [];
-        return membres.filter(m => m.project_id === project.projet_id);
-    }, [membres, project?.projet_id]);
-
-
 
     if (!isOpen) return null;
 
@@ -353,7 +349,7 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                                                         {membresDuProjet.map(member => (
                                                             <option
                                                                 key={member.membre_id}
-                                                                value={member.nomComplet}
+                                                                value={member.membre_id}
                                                             >
                                                                 {member.nomComplet} - {member.poste}
                                                             </option>
@@ -372,26 +368,15 @@ const ModalCreatePhase = ({ isOpen, onClose, project, budget, setBudget }) => {
                                             ))}
                                         </div>
 
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => appendMembre('')}
-                                                className="text-blue hover:text-blue-800 text-sm font-medium">
-                                                + Ajouter un autre membre
-                                            </button>
-
-                                            <span className="text-gray-300 mx-2">|</span>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsAddMembreModalOpen(true)}
-                                                className="text-green-600 hover:text-green-800 text-sm font-medium flex items-center gap-1">
-                                                <PersonAdd fontSize="small" /> Ajouter un nouveau membre
-                                            </button>
-                                </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => appendMembre('')}
+                                            className="text-blue hover:text-blue-800 text-sm font-medium mt-4 text-green-600 ">
+                                            + Ajouter un autre membre
+                                        </button>
 
                                 {/* Petit rappel du nombre de membres disponibles */}
-                                <p className="text-xs text-gray-500 mt-2">
+                                        <p className="text-2xd text-gray-600 mt-2 font-medium">
                                     {membresDuProjet.length} membre(s) disponible(s) dans l'équipe
                                 </p>
                             </>

@@ -9,6 +9,7 @@ import React, {
 import { alertService } from '../Services/alertService';
 
 
+
 const PhasesContext = createContext();
 
 export const PhaseProvider = ({ children }) => {
@@ -91,10 +92,10 @@ export const PhaseProvider = ({ children }) => {
     /* =========================
       UPDATE PHASE
    ========================== */
-    const updatePhase = useCallback(async (phase_id, phaseData) => {
+    const updatePhase = useCallback(async (projet_id, phaseData) => {
 
         try {
-            const result = await window.api.updatePhase(phase_id, phaseData);
+            const result = await window.api.updatePhase(projet_id, phaseData);
             console.log(result);
 
             if (!result) {
@@ -108,11 +109,14 @@ export const PhaseProvider = ({ children }) => {
             const newPhaseData = result?.data.phase;
             const newBudget = result?.data.budget;
 
+
             setPhases(prev =>
-                prev.map(p => p.phase_id === phase_id ? { ...p, ...newPhaseData } : p)
+                prev.map(p => p.phase_id === phaseData.phase_id ? { ...p, ...newPhaseData } : p)
             );
 
-            alertService.success(`La Phase ${newPhaseData.title} a été modifié avec succès !`)
+            alertService.success(`La Phase ${newPhaseData.title} a été modifié avec succès !`);
+            console.log("Phase mise à jour:", newPhaseData);
+            console.log("Budget mis à jour:", newBudget);
             return {
                 success: true,
                 data: newBudget

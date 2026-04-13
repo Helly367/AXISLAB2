@@ -18,7 +18,7 @@ const CampaignBudget = ({ campagne, onBack, onUpdate, budgetGlobal }) => {
     const [isAdding, setIsAdding] = useState(false);
 
     const totalDepenses = depenses.reduce((sum, d) => sum + d.montant, 0);
-    const budgetRestant = campagne.budgetAlloue - totalDepenses;
+    const budgetRestant = campagne?.budgetAlloue - totalDepenses;
     const pourcentageUtilise = (totalDepenses / campagne.budgetAlloue) * 100;
 
     const handleAddDepense = () => {
@@ -55,7 +55,7 @@ const CampaignBudget = ({ campagne, onBack, onUpdate, budgetGlobal }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                     <div className="bg-blue-50 rounded-lg p-4">
                         <p className="text-sm text-blue-600 mb-1">Budget alloué</p>
-                        <p className="text-2xl font-bold text-blue-600">{campagne.budgetAlloue.toLocaleString()} FCFA</p>
+                        <p className="text-2xl font-bold text-blue-600">{278} FCFA</p>
                     </div>
                     <div className="bg-orange-50 rounded-lg p-4">
                         <p className="text-sm text-orange-600 mb-1">Dépensé</p>

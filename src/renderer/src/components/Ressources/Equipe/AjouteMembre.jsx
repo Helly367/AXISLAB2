@@ -70,7 +70,10 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
 
         if (!isDirty) {
             alertService.info("Aucune modification détectée")
+            setLoading(false);
+            return;
         }
+        
         setLoading(true);
 
         try {
@@ -86,7 +89,6 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
             await new Promise(resolve => setTimeout(resolve, 3000));
             const result = await createMembre(newMember);
 
-            console.log(result);
 
             if (!result || !result.success) {
                 console.error(result?.error || result?.errors || "Erreur inconnue");
@@ -397,7 +399,7 @@ const AjouterMembre = ({ isOpen, onClose, project }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-gray-400'
                         >
 
                             {loading ? (

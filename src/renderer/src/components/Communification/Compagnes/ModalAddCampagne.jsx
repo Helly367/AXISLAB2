@@ -1,15 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
     Close, Save, Campaign, LocationOn,
     Category, AttachMoney, CalendarToday,
-    Description, Person, Flag, Photo
+    Description, Person, Flag, Warning
 } from "@mui/icons-material";
+import { formatMontant, styleChamps, verifieChamps } from '../../../Services/functions';
+import { motion } from 'framer-motion';
+import { useCampagnes } from '../../../hooks/useCampagnes';
+import { useBudgets } from '../../../hooks/useBudgets';
 
-const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
-    const { register, handleSubmit, formState: { errors }, reset } = useForm({
+const ModalAddCampagne = ({ isOpen, onClose, project }) => {
+    const [loading, setLoading] = useState(false);
+    const [isDepassement, setisDepassement] = useState(false);
+    const [erreurDepassement, setErreurDepassement] = useState('');
+    const { createCampagne } = useCampagnes();
+    const { setBudget, budget } = useBudgets();
+
+
+    useEffect(() => {
+
+        if (isOpen) {
+            setisDepassement(false);
+            setErreurDepassement('');
+            setLoading(false);
+        }
+
+    }, [isOpen]);
+
+    const { register, handleSubmit, formState: { errors }, reset, watch } = useForm({
         defaultValues: {
-            nom: '',
+            nom_compagne: '',
             ville: '',
             secteur: '',
             cout: '',
@@ -19,20 +40,65 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
             description: '',
             objectif: '',
             responsable: '',
-            image: ''
+            planification: {
+                type: "continue",
+                etapes: [],
+                canaux: [],
+                formateurs: []
+            },
+            resultats: {}
         }
+
+
     });
 
-    const onSubmit = (data) => {
+    const watchedFields = watch();
+    const style = styleChamps();
+
+    const handleClose = () => {
+        setLoading(false);
+        reset();
+        onClose();
+
+    };
+
+
+    const onSubmit = async (data) => {
+
+        if (Number(data.cout) > Number(budget.budget_restant)) {
+
+            setisDepassement(true);
+            setErreurDepassement(`Attention : le cout   dépasse le budget restant du projet (${budget.budget_restant} ${budget.devise}). Veuillez ajuster le budget ou le coût de la campagne.`);
+            setLoading(false);
+            return;
+
+        }
+
+        setLoading(true);
         const newCampagne = {
             ...data,
             cout: Number(data.cout),
             date_debut: data.date_debut,
-            date_fin: data.date_fin
+            date_fin: data.date_fin,
+            projet_id: project?.projet_id,
         };
-        onSave(newCampagne);
-        reset();
-        onClose();
+
+        await new Promise(resolve => setTimeout(resolve, 3000))
+        const response = await createCampagne(newCampagne);
+
+
+        console.log(response);
+
+        if (!response.success) {
+            console.error(response.error || response.errors);
+            setLoading(false);
+            return;
+        }
+
+        setBudget(response.data?.budget);
+        setLoading(false);
+        handleClose();
+
     };
 
     if (!isOpen) return null;
@@ -44,19 +110,14 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
         'Culture', 'Sport', 'Social', 'Autre'
     ];
 
-    // Villes du Cameroun
-    const villes = [
-        'Douala', 'Yaoundé', 'Garoua', 'Bamenda', 'Bafoussam',
-        'Maroua', 'Ngaoundéré', 'Bertoua', 'Ebolowa', 'Kribi',
-        'Limbe', 'Kumbo', 'Buea', 'Foumban', 'Dschang'
-    ];
+
 
     return (
         <div className="fixed inset-0 bg-opacity flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 flex justify-between items-center sticky top-0">
-                    <h2 className="text-xl text-white font-bold">Nouvelle campagne</h2>
+                <div className="bg-primary p-2 flex justify-between items-center sticky top-0">
+                    <h2 className="text-2xd text-white font-bold">Nouvelle campagne</h2>
                     <button
                         onClick={onClose}
                         className="text-white hover:bg-blue-700 p-1 rounded-full transition-colors">
@@ -74,17 +135,23 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                         </label>
                         <input
                             type="text"
-                            {...register('nom', {
+                            {...register('nom_compagne', {
                                 required: 'Le nom est requis',
                                 minLength: { value: 3, message: 'Minimum 3 caractères' }
                             })}
-                            className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.nom ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={50} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 50) {
+                                    e.target.value = e.target.value.slice(0, 50);
+                                }
+                                // mettre à jour React Hook Form
+                                register("budget_phase").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "nom_compagne")} `}
                             placeholder="Ex: Lancement produit X"
                         />
-                        {errors.nom && (
-                            <p className="text-red-500 text-sm mt-1">{errors.nom.message}</p>
+                        {errors.nom_compagne && (
+                            <p className="text-red-500 text-sm mt-1">{errors.nom_compagne.message}</p>
                         )}
                     </div>
 
@@ -95,16 +162,21 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                                 <LocationOn className="inline mr-2 text-blue-600" />
                                 Ville
                             </label>
-                            <select
+                            <input
+                                type='text'
                                 {...register('ville', { required: 'La ville est requise' })}
-                                className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.ville ? 'border-red-500' : 'border-gray-300'
-                                    }`}>
-                                <option value="">Sélectionnez une ville</option>
-                                {villes.map(ville => (
-                                    <option key={ville} value={ville}>{ville}</option>
-                                ))}
-                            </select>
+                                maxLength={30} // limite stricte
+                                onChange={(e) => {
+                                    if (e.target.value.length > 30) {
+                                        e.target.value = e.target.value.slice(0, 30);
+                                    }
+                                    // mettre à jour React Hook Form
+                                    register("ville").onChange(e)
+                                }}
+                                placeholder='Ex: Kinshasa'
+                                className={`${style} ${verifieChamps(errors, watchedFields, "ville")} `} />
+
+
                             {errors.ville && (
                                 <p className="text-red-500 text-sm mt-1">{errors.ville.message}</p>
                             )}
@@ -117,9 +189,8 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                             </label>
                             <select
                                 {...register('secteur', { required: 'Le secteur est requis' })}
-                                className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.secteur ? 'border-red-500' : 'border-gray-300'
-                                    }`}>
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, "secteur")} `}>
                                 <option value="">Sélectionnez un secteur</option>
                                 {secteurs.map(secteur => (
                                     <option key={secteur} value={secteur}>{secteur}</option>
@@ -129,28 +200,6 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                                 <p className="text-red-500 text-sm mt-1">{errors.secteur.message}</p>
                             )}
                         </div>
-                    </div>
-
-                    {/* Coût */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <AttachMoney className="inline mr-2 text-blue-600" />
-                            Budget (FCFA)
-                        </label>
-                        <input
-                            type="number"
-                            {...register('cout', {
-                                required: 'Le budget est requis',
-                                min: { value: 1000, message: 'Minimum 1000 FCFA' }
-                            })}
-                            className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.cout ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                            placeholder="0"
-                        />
-                        {errors.cout && (
-                            <p className="text-red-500 text-sm mt-1">{errors.cout.message}</p>
-                        )}
                     </div>
 
                     {/* Dates */}
@@ -165,9 +214,8 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                                 {...register('date_debut', {
                                     required: 'La date de début est requise'
                                 })}
-                                className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.date_debut ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, "date_debut")} `}
                             />
                             {errors.date_debut && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date_debut.message}</p>
@@ -188,15 +236,16 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                                             'La date de fin doit être après la date de début';
                                     }
                                 })}
-                                className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.date_fin ? 'border-red-500' : 'border-gray-300'
-                                    }`}
+
+                                className={`${style} ${verifieChamps(errors, watchedFields, "date_fin")} `}
                             />
                             {errors.date_fin && (
                                 <p className="text-red-500 text-sm mt-1">{errors.date_fin.message}</p>
                             )}
                         </div>
                     </div>
+
+
 
                     {/* Statut */}
                     <div>
@@ -205,7 +254,8 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                         </label>
                         <select
                             {...register('status')}
-                            className="w-full p-3 focus:outline-blue-600  border-2 border-gray-600 rounded-md ">
+
+                            className={`${style} ${verifieChamps(errors, watchedFields, "status")} `}>
                             <option value="inactif">Inactif</option>
                             <option value="en_cours">En cours</option>
                             <option value="en_pause">En pause</option>
@@ -224,9 +274,15 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                             {...register('responsable', {
                                 required: 'Le responsable est requis'
                             })}
-                            className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.responsable ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            c maxLength={20} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 20) {
+                                    e.target.value = e.target.value.slice(0, 20);
+                                }
+                                // mettre à jour React Hook Form
+                                register("responsable").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "responsable")} `}
                             placeholder="Nom du responsable"
                         />
                         {errors.responsable && (
@@ -245,9 +301,15 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                             {...register('objectif', {
                                 required: "L'objectif est requis"
                             })}
-                            className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.objectif ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={100} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 100) {
+                                    e.target.value = e.target.value.slice(0, 100);
+                                }
+                                // mettre à jour React Hook Form
+                                register("objectif").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "objectif")} `}
                             placeholder="Ex: Atteindre 1000 ventes"
                         />
                         {errors.objectif && (
@@ -267,9 +329,15 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                                 minLength: { value: 10, message: 'Minimum 10 caractères' }
                             })}
                             rows="4"
-                            className={`w-full p-3 focus:outline-blue-600  border-2 border-gray-600 rounded-md 
-              bg-transparent  placeholder-gray-600 ${errors.description ? 'border-red-500' : 'border-gray-300'
-                                }`}
+                            maxLength={150} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 150) {
+                                    e.target.value = e.target.value.slice(0, 150);
+                                }
+                                // mettre à jour React Hook Form
+                                register("description").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "description")} `}
                             placeholder="Description détaillée de la campagne..."
                         />
                         {errors.description && (
@@ -277,109 +345,52 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
                         )}
                     </div>
 
-                    {/* Photo URL */}
-                    <div className='flex flex-col gap-3'>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <Photo className="inline mr-2 text-primary" />
-                            URL de la photo (optionnel)
-                        </label>
 
-                        <div className='flex items-center gap-6 self-center'>
-                            <img src="" alt="" className='w-40 h-40 rounded-full border border-gray-400 shadow-sm' />
-                            <label htmlFor="photo"
-                                className='bg-blue-600 p-2 rounded-xl text-white cursor-pointer'>selctionner un photo</label>
-                            <input
-                                id='photo'
-                                type="file"
-                                {...register('photo')}
-                                className="hidden "
-                                accept='image/*'
-                            />
-                        </div>
-
-                    </div>
-
-
-                    {/* Planification */}
-                    <div className="border rounded-lg p-4">
-                        <h3 className="font-medium text-gray-700 mb-4">Planification</h3>
-
-                        <div className="mb-4">
-                            <label className="block text-sm text-gray-600 mb-2">Type de planification</label>
-                            <select {...register('planification.type')} className="w-full p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600">
-                                <option value="continue">Continue</option>
-                                <option value="par_etapes">Par étapes</option>
-                                <option value="evenement">Événement</option>
-                                <option value="saisonniere">Saisonnière</option>
-                                <option value="formation">Formation</option>
-                            </select>
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="block text-sm text-gray-600 mb-2">Dates réelles</label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="text-xs text-gray-500">Début réel</span>
-                                    <input
-                                        type="date"
-                                        {...register('date_debut_reelle')}
-                                        className="w-full p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600"
-                                    />
-                                </div>
-                                <div>
-                                    <span className="text-xs text-gray-500">Fin réelle</span>
-                                    <input
-                                        type="date"
-                                        {...register('date_fin_reelle')}
-                                        className="w-full p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Budget alloué */}
+                    {/* Coût */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            <AttachMoney className="inline mr-2 text-blue-600" />
-                            Budget alloué (FCFA)
+                        <label className="flex gap-3 text-sm font-medium text-gray-700 mb-2">
+                            <span>
+                                <AttachMoney className="inline mr-2 text-blue-600" />
+                                Budget de la campagne
+                            </span>
+                            <span className='text-green-600'>
+                                /  budget du projet : {formatMontant(budget?.budget_restant)} {budget?.devise}
+                            </span>
+
                         </label>
                         <input
                             type="number"
-                            {...register('budgetAlloue', { required: 'Le budget est requis' })}
-                            className="w-full p-3 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600"
+                            {...register('cout', {
+                                required: 'Le budget est requis',
+                                min: { value: 1000, message: 'Minimum 1000' }
+                            })}
+                            maxLength={20} // limite stricte
+                            onChange={(e) => {
+                                if (e.target.value.length > 20) {
+                                    e.target.value = e.target.value.slice(0, 20);
+                                }
+                                // mettre à jour React Hook Form
+                                register("cout").onChange(e)
+                            }}
+                            className={`${style} ${verifieChamps(errors, watchedFields, "cout")} `}
+                            placeholder="0"
                         />
-                    </div>
+                        {errors.cout && (
+                            <p className="text-red-500 text-sm mt-1">{errors.cout.message}</p>
+                        )}
 
-                    {/* Objectifs détaillés */}
-                    <div className="border rounded-lg p-4">
-                        <h3 className="font-medium text-gray-700 mb-4">Objectifs détaillés</h3>
+                        {isDepassement && (
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm text-gray-600 mb-1">Objectif quantitatif</label>
-                                <input
-                                    type="text"
-                                    {...register('objectif_quantitatif')}
-                                    className="w-full p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600"
-                                    placeholder="Ex: 1000 ventes"
-                                />
+                            <div className="w-full bg-red-50 border border-red-200 rounded-lg p-4  m-auto mt-3">
+                                <p className="text-2xd text-red-700 flex items-start gap-2">
+                                    <Warning className="text-red-600 shrink-0" fontSize="small" />
+                                    <span>{erreurDepassement}</span>
+                                </p>
                             </div>
-                            <div>
-                                <label className="block text-sm text-gray-600 mb-1">Cible (personnes)</label>
-                                <input
-                                    type="number"
-                                    {...register('cible_personnes')}
-                                    className="w-full p-2 focus:outline-blue-600  border-2 border-gray-400 rounded-md 
-              bg-transparent  placeholder-gray-600"
-                                />
-                            </div>
-                        </div>
+
+                        )}
+
+
                     </div>
 
                     {/* Boutons */}
@@ -391,11 +402,28 @@ const ModalAddCampagne = ({ isOpen, onClose, onSave }) => {
               bg-transparent  placeholder-gray-600 hover:bg-gray-50 transition-colors">
                             Annuler
                         </button>
-                        <button
+
+                        <motion.button
                             type="submit"
-                            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                            <Save /> Créer la campagne
-                        </button>
+                            disabled={loading || Object.keys(errors).length > 0}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
+                        >
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Création en cours ...
+                                </>
+                            ) : (
+                                <>
+                                    <Save /> Créer la campagne
+                                </>
+                            )}
+                        </motion.button>
                     </div>
                 </form>
             </div>

@@ -5,11 +5,13 @@ import {
 import AjouterMembre from './AjouteMembre';
 import ModifyMembre from './ModifyMembre';
 import { useMembres } from '../../../hooks/useMembers';
+import { usePhases } from '../../../hooks/usePhase';
 import DetailsMembre from './DetailsMembre';
 import DeleteConfirm from '../../widjets/DeleteConfirm';
 
 const EquipeList = ({ project }) => {
-    const { membres, deleteMembre, setMembres } = useMembres();
+    const { membres, deleteMembre, setMembres, loadMembres } = useMembres();
+    const { setPhases } = usePhases();
     const [loading, setLoading] = useState(false);
     const [openDelete, setOpenDelete] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -97,7 +99,10 @@ const EquipeList = ({ project }) => {
             return;
         }
 
-        setMembres(result.data);
+        setMembres(result.data.membres);
+        setPhases(result.data.phases);
+        loadMembres();
+
         setOpenDelete(false);
         setMemberToEdit(null);
         handleClose();
@@ -146,7 +151,7 @@ const EquipeList = ({ project }) => {
                             }
 
                         }}
-                        className={`w-full px-5 py-3 bg-gray-50 border-2 rounded-xl 
+                        className={`w-full px-5 py-3 bg-gray-50 border-2 border-gray-400 rounded-xl 
                            focus:outline-none focus:bg-white focus:border-blue-500
                            transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                     />

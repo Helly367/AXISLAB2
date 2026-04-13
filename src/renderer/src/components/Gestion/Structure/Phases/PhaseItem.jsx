@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowBack, Person, CalendarToday, Edit, Delete } from "@mui/icons-material";
 import { useParams } from 'react-router-dom';
 import DeleteConfirm from '../../../widjets/DeleteConfirm';
 import { usePhases } from '../../../../hooks/usePhase';
 import { formateMontantSimple } from '../../../../Services/functions';
 import { useBudgets } from '../../../../hooks/useBudgets';
+import { useMembres } from '../../../../hooks/useMembers';
 
 const formatDate = (date) => {
     if (!date) return "-";
@@ -32,10 +33,17 @@ const generateNiceColor = () => {
 
 const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
     const { budget, setBudget } = useBudgets();
+    const { membres, loadMembres } = useMembres();
+    const [isMembres, setIsMembres] = useState(false);
     const { phase_id } = useParams();
     const [openDelete, setOpenDelete] = useState(false);
     const { deletePhase } = usePhases();
     const [loading, setLoading] = useState(false);
+
+    // Charger les membres
+    useEffect(() => {
+        loadMembres();
+    }, [loadMembres]);
 
     const color = useMemo(() => generateNiceColor(), []);
 
@@ -67,6 +75,19 @@ const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
         setOpenDelete(false);
     }
 
+    // ✅ FILTRER LES MEMBRES : Garder uniquement ceux dont l'ID est dans phase.membres
+    const membresFiltres = useMemo(() => {
+        if (!membres || !phase?.membres) return [];
+
+        const membresIds = phase.membres; // [1, 2, 3] ou ["1", "2", "3"]
+
+        return membres.filter(membre => {
+            // Convertir les IDs en nombre pour comparaison
+            const membreId = Number(membre.membre_id);
+            return membresIds.some(id => Number(id) === membreId);
+        });
+    }, [membres, phase]);
+
 
     if (!phase) {
         return (
@@ -81,7 +102,6 @@ const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
 
 
     const tasks = Array.isArray(phase?.taches) ? phase.taches : [];
-    const members = Array.isArray(phase?.membres) ? phase.membres : [];
 
 
     return (
@@ -142,28 +162,35 @@ const PhaseItem = ({ phases = [], onBack, onEdit, devise, project }) => {
             </div>
 
             {/* Membres */}
+            {/* ✅ MEMBRES FILTRÉS */}
             <div className="mb-8">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">
-                    Membres ({members.length})
+                    Membres ({membresFiltres.length})
                 </h3>
 
-                <div className="flex items-center gap-6">
-                    {members.map((membre, index) => (
-                        <div
-                            key={index}
-                            style={{ backgroundColor: color }}
-                            className={`rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow w-[15%]`}
-                        >
-                            <div className="bg-blue bg-white p-3 rounded-full mb-2">
-                                <Person className='text-primary' />
+                {membresFiltres.length === 0 ? (
+                    <p className="text-gray-500 italic">Aucun membre assigné à cette phase</p>
+                ) : (
+                    <div className="flex flex-wrap items-center gap-6">
+                        {membresFiltres.map((membre, index) => (
+                            <div
+                                key={membre.membre_id || index}
+                                style={{ backgroundColor: generateNiceColor() }}
+                                className="rounded-lg p-4 flex flex-col items-center text-center hover:shadow-md transition-shadow w-37.5"
+                            >
+                                <div className="bg-white p-3 rounded-full mb-2">
+                                    <Person className='text-primary' />
+                                </div>
+                                <span className="text-sm font-medium text-white">
+                                    {membre.nomComplet || membre.nom || membre.prenom}
+                                </span>
+                                <span className="text-xs text-white/80 mt-1">
+                                    {membre.poste || "Membre"}
+                                </span>
                             </div>
-
-                            <span className="text-sm font-medium text-white">
-                                {membre}
-                            </span>
+                        ))}
                         </div>
-                    ))}
-                </div>
+                )}
             </div>
 
             {/* Dates + Actions */}

@@ -38,7 +38,6 @@ export const MaterielProvider = ({ children }) => {
 
         try {
             setLoading(true);
-
             const result = await window.api.loadAllMateriels(activeProject);
 
             if (result.success) {
@@ -76,9 +75,6 @@ export const MaterielProvider = ({ children }) => {
        CREATE PHASE
     ========================== */
     const createMateriel = useCallback(async (materielData) => {
-
-        console.log("materielData", materielData);
-
         try {
 
             if (!window.api?.createMateriel) {
@@ -86,10 +82,6 @@ export const MaterielProvider = ({ children }) => {
             }
 
             const result = await window.api.createMateriel(materielData);
-
-            console.log("result", result);
-
-
 
             if (!result) {
                 throw new Error("Aucune réponse du backend");
@@ -100,14 +92,14 @@ export const MaterielProvider = ({ children }) => {
             }
 
             const newMateriel = result?.data.materiel;
-            const newPhases = result?.data.phases;
+
 
 
             // Optimisation : on ajoute sans reload complet
             setMateriels(prev => [...prev, newMateriel]);
             alertService.success(`Materiel ajouter !`)
 
-            return { success: true, data: newPhases };
+            return result;
 
         } catch (err) {
             console.error("Erreur création:", err);
@@ -169,8 +161,6 @@ export const MaterielProvider = ({ children }) => {
             }
 
             const materiel_id = result.data.materiel_id;
-            const materiel = result.data.materiel;
-            const phase = result.data.phase;
 
 
             setMateriels(prev =>
@@ -183,10 +173,7 @@ export const MaterielProvider = ({ children }) => {
                 `Materiel supprimé avec succès !`
             );
 
-            return {
-                success: true,
-                data: phase
-            };
+            return result;
 
         } catch (err) {
             console.error("Erreur suppression:", err);

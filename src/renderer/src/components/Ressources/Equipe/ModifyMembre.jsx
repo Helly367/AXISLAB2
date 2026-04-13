@@ -10,6 +10,8 @@ import { styleChamps, verifieChamps } from '../../../Services/functions';
 
 const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
     const [loading, setLoading] = useState(false);
+    const [isCompetenceError, setIsCompentenceError] = useState(false);
+    const [compentenceError, setCompentenceError] = useState('');
     const { updateMembre } = useMembres();
     const [validationErrors, setValidationErrors] = useState([]);
 
@@ -55,8 +57,31 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
 
     const onSubmit = async (data) => {
 
-        if (!isDirty) {
-            alertService.info("Aucune modification detectee");
+        // Récupérer les compentences originales
+        const originalCompetences = memberToEdit?.competences?.length ? memberToEdit.competences : [''];
+        const currentCompetences = data.competences || [];
+
+        // Vérifier si les tâches ont changé
+        const hasCompetencesChanged =
+            currentCompetences.length !== originalCompetences.length ||
+            currentCompetences.some((competence, index) =>
+                competence?.trim() !== originalCompetences[index]?.trim()
+            );
+
+        // Vérifier modification globale OU modification des tâches
+        if (!isDirty && !hasCompetencesChanged) {
+            alertService.info("Aucune modification détectée");
+            setLoading(false);
+            return;
+        }
+
+        // Vérifier qu'il y a au moins une competence remplie
+        const hasCompetence = currentCompetences.some(c => c && c.trim() !== '');
+        if (!hasCompetence) {
+            setIsCompentenceError(true);
+            setCompentenceError("Ajoute au moins une competence");
+            setLoading(false);
+            return;
         }
         setLoading(true);
         setValidationErrors([]);
@@ -357,6 +382,12 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                             </button>
                         </div>
 
+                        {isCompetenceError && (
+                            <p className="text-red-500 text-sm mt-1">
+                                {compentenceError}
+                            </p>
+                        )}
+
                         {/* Boutons */}
                         <div className="flex justify-end gap-3 border-t pt-4">
                             <button
@@ -371,7 +402,7 @@ const ModifyMembre = ({ isOpen, onClose, memberToEdit, project }) => {
                                 disabled={loading || Object.keys(errors).length > 0}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                                className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                             >
                                 {loading ? (
                                     <>

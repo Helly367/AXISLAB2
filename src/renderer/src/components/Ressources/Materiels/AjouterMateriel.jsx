@@ -22,8 +22,24 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
     const [isbudgetErreur, setISbudgetErreur] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    // Charger les membres quand la modale s'ouvre
+    useEffect(() => {
+        if (isOpen && project?.projet_id) {
+            const fetchPhases = async () => {
+                setLoadingPhases(true);
+                await loadPhases();
+                setLoadingPhases(false);
+                setISbudgetErreur(false);
+                reset();
+                setLoading(false);
+            };
+            fetchPhases();
+        }
+    }, [isOpen, project?.projet_id, loadPhases]);
+
     const PhasesDuProjet = useMemo(() => {
-        if (!phases || !project?.projet_id) return [];
+        if (!Array.isArray(phases) || !project?.projet_id) return [];
+
         return phases.filter(m => m?.projet_id === project.projet_id);
     }, [phases, project?.projet_id]);
 
@@ -41,20 +57,6 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
         }
     });
 
-    // Charger les membres quand la modale s'ouvre
-    useEffect(() => {
-        if (isOpen && project?.projet_id) {
-            const fetchPhases = async () => {
-                setLoadingPhases(true);
-                await loadPhases();
-                setLoadingPhases(false);
-                setISbudgetErreur(false);
-                reset();
-                setLoading(false);
-            };
-            fetchPhases();
-        }
-    }, [isOpen, project?.projet_id, loadPhases]);
 
 
     const watchPrix = watch('prix', 0);
@@ -113,10 +115,11 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
 
             };
 
-            console.log(newMateriel);
+
             await new Promise(resolve => setTimeout(resolve, 3000));
             const result = await createMateriel(newMateriel);
 
+            console.log("result", result);
 
 
             if (!result || !result.success) {
@@ -127,8 +130,15 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
                 return;
             }
 
-            setPhases(result.data);
+            console.log("result.data.phases", result.data.phases);
 
+            setPhases(prev =>
+                Array.isArray(prev)
+                    ? prev.map(p =>
+                        p.phase_id === result.data.phase.phase_id ? result.data.phase : p
+                    )
+                    : []
+            );
             setLoading(false);
             handleClose();
 
@@ -423,7 +433,7 @@ const AjouterMateriel = ({ isOpen, onClose, project, budget }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed'
                         >
 
                             {loading ? (

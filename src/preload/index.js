@@ -52,10 +52,19 @@ configureBudget: (projet_id , budgetData) => ipcRenderer.invoke('configure-budge
 loadAllMateriels: (projet_id) => ipcRenderer.invoke('get-AllMateriels', projet_id),
 createMateriel: (materielData) => ipcRenderer.invoke('ajouter-materiel', materielData),
 updateMateriel: (projet_id, materielData) => ipcRenderer.invoke('update-materiel', projet_id, materielData),
-deleteMateriel: (projet_id , materiel_id, phase_id) => ipcRenderer.invoke('delete-materiel', projet_id , materiel_id , phase_id),
+deleteMateriel: (projet_id, materiel_id, phase_id) => ipcRenderer.invoke('delete-materiel', projet_id, materiel_id, phase_id),
 
+  //   // CAMPAGNES - CRUD complet 
+getAllCampagnes: (projet_id) => ipcRenderer.invoke('get-AllCampagnes', projet_id),
+createCampagne: (campagneData) => ipcRenderer.invoke('create-campagne', campagneData),
+ajouteEtape: (projet_id, campagne_id, newEtape) => ipcRenderer.invoke('ajoute-etape', projet_id, campagne_id, newEtape),
+updateEtape: (projet_id, campagne_id, updatedEtapes) => ipcRenderer.invoke('update-etape', projet_id, campagne_id, updatedEtapes),
 
-  
+deleteEtape: (projet_id,campagne_id , data) => ipcRenderer.invoke('delete-etape',projet_id ,campagne_id , data),
+
+ajouteCanal:(projet_id, campagne_id, newCanal) => ipcRenderer.invoke('ajoute-canal', projet_id, campagne_id, newCanal),
+
+deleteCanal: (projet_id,campagne_id , data) => ipcRenderer.invoke('delete-canal',projet_id ,campagne_id , data),
  
 }
 

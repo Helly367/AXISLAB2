@@ -5,6 +5,7 @@ import EquipeContnent from "../Ressources/Equipe/EquipeContent";
 import BudgetContent from "../Ressources/Budget/BudgetContent";
 import MaterielContent from "../Ressources/Materiels/MaterielContent";
 import ProjectDashboardChart from "../Gestion/Progress";
+import CampagnesContent from "../Communification/Compagnes/CampagnesContent";
 import { usePhases } from "../../hooks/usePhase";
 
 
@@ -23,6 +24,7 @@ const DashboardContent = ({ project }) => {
                 <Route path="equipe/*" element={<EquipeContnent project={project} />} />
                 <Route path="Budget/*" element={<BudgetContent project={project} />} />
                 <Route path="materiels/*" element={<MaterielContent project={project} />} />
+                <Route path="campagnes/*" element={<CampagnesContent project={project} />} />
 
 
                 <Route path="*" element={<Navigate to="profile" replace />} />

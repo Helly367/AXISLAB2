@@ -32,9 +32,10 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
             date_fin: '',
             taches: [''],
             membres: [''],
-            montant: ''
+            budget_phase: 0
         }
     });
+
 
     const { fields: tacheFields, append: appendTache, remove: removeTache, } = useFieldArray({
         control,
@@ -47,8 +48,11 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
     });
 
     const dateDebut = watch('date_debut');
-    const watchMontant = watch('montant', 0);
+    const watchMontant = watch('budget_phase', 0);
     const watchedFields = watch();
+
+
+
 
     const style = styleChamps();
 
@@ -89,24 +93,40 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                 date_fin: formateDateChamps(phaseToEdit.date_fin) || '',
                 taches: phaseToEdit.taches?.length ? phaseToEdit.taches : [''],
                 membres: phaseToEdit.membres?.length ? phaseToEdit.membres : [''],
-                montant: ''
+                budget_phase: ''
             });
         }
     }, [phaseToEdit, reset]);
 
+
+    // Filtrer les membres du projet en cours
+    const membresDuProjet = useMemo(() => {
+        if (!membres || !project?.projet_id) return [];
+        return membres.filter(m => m.projet_id === project.projet_id);
+    }, [membres, project?.projet_id]);
+
     const onSubmit = async (data) => {
 
-        // Vérifier s'il y a au moins une tâche remplie
-        const hasTache = data.taches.some(t => t && t.trim() !== '');
+        // Récupérer les tâches originales
+        const originalTaches = phaseToEdit?.taches?.length ? phaseToEdit.taches : [''];
+        const currentTaches = data.taches || [];
 
-        // Vérifier modification OU tâche
-        if (!isDirty && !hasTache) {
+        // Vérifier si les tâches ont changé
+        const hasTachesChanged =
+            currentTaches.length !== originalTaches.length ||
+            currentTaches.some((tache, index) =>
+                tache?.trim() !== originalTaches[index]?.trim()
+            );
+
+        // Vérifier modification globale OU modification des tâches
+        if (!isDirty && !hasTachesChanged) {
             alertService.info("Aucune modification détectée");
             setLoading(false);
             return;
         }
 
-        // Si aucune tâche → erreur
+        // Vérifier qu'il y a au moins une tâche remplie
+        const hasTache = currentTaches.some(t => t && t.trim() !== '');
         if (!hasTache) {
             setIsTachesError(true);
             setTachesError("Ajoute au moins une tâche");
@@ -114,9 +134,9 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
             return;
         }
 
+
         setIsTachesError(false);
         setTachesError('');
-        console.log("OK on envoie :", data);
 
         setLoading(true);
 
@@ -129,16 +149,19 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
             phase_id: phaseToEdit.phase_id,
             budget_phase: data.montant,
             taches: (data.taches || []).map(t => t.trim()).filter(Boolean),
-            membres: membresSelectionnes
+            membres: membresSelectionnes,
+            budget_phase: data.budget_phase || 0,
         };
 
         await new Promise(resolve => setTimeout(resolve, 3000))
         const result = await updatePhase(project.projet_id, updatedPhaseData);
 
-        console.log(result);
-        setBudget(result.data);
-        handleClose();
+        if (result.data !== null) {
+            setBudget(result.data);
 
+        }
+
+        handleClose();
 
         if (!result.success) {
             console.error(result.error || result.errors);
@@ -156,11 +179,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
     };
 
 
-    // Filtrer les membres du projet en cours
-    const membresDuProjet = useMemo(() => {
-        if (!membres || !project?.projet_id) return [];
-        return membres.filter(m => m.project_id === project.projet_id);
-    }, [membres, project?.projet_id]);
+
 
     if (!isOpen) return null;
 
@@ -284,7 +303,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             <Task className="inline mr-2 text-blue" />
-                            Tâches (facultative)
+                            Tâches (obligatoire)
                         </label>
 
                         <div className="space-y-2">
@@ -373,7 +392,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                                                         {membresDuProjet.map(member => (
                                                             <option
                                                                 key={member.membre_id}
-                                                                value={member.nomComplet}
+                                                                value={member.membre_id}
                                                             >
                                                                 {member.nomComplet} - {member.poste}
                                                             </option>
@@ -392,25 +411,17 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                                             ))}
                                         </div>
 
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => appendMembre('')}
-                                                className="text-blue hover:text-blue-800 text-sm font-medium">
-                                                + Ajouter un autre membre
-                                            </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => appendMembre('')}
+                                            className="mt-4 text-blue hover:text-blue-800 text-sm font-medium">
+                                            + Ajouter ou modifier un membre
+                                        </button>
 
-                                            <span className="text-gray-300 mx-2">|</span>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsAddMembreModalOpen(true)}
-                                                className="text-green-600 hover:text-green-800 text-sm font-medium flex items-center gap-1">
-                                                <PersonAdd fontSize="small" /> Ajouter un nouveau membre
-                                            </button>
-                                </div>
 
-                                <p className="text-xs text-gray-500 mt-2">
+
+                                        <p className="text-2xd text-gray-500 mt-2">
                                     {membresDuProjet.length} membre(s) disponible(s) dans l'équipe
                                 </p>
                             </>
@@ -437,7 +448,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                                 min="0"
                                 step="0.01"
                                 placeholder='Ex: 8000'
-                                {...register('montant', {
+                                {...register('budget_phase', {
                                     min: { value: 0, message: 'Le montant doit être positif' },
 
                                 })}
@@ -446,12 +457,12 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                                     if (e.target.value.length > 16) {
                                         e.target.value = e.target.value.slice(0, 16);
                                     }
-                                    register('montant').onChange(e);
+                                    register('budget_phase').onChange(e);
                                 }}
-                                className={`${style} ${verifieChamps(errors, watchedFields, 'montant')}`} // ✅ CORRIGÉ
+                                className={`${style} ${verifieChamps(errors, watchedFields, 'budget_phase')}`} // ✅ CORRIGÉ
                             />
-                            {errors.montant && (
-                                <p className="text-red-500 text-sm mt-1">{errors.montant.message}</p>
+                            {errors.budget_phase && (
+                                <p className="text-red-500 text-sm mt-1">{errors.budget_phase.message}</p>
                             )}
 
                         </div>
@@ -471,7 +482,7 @@ const ModalEditPhase = ({ isOpen, onClose, phaseToEdit, project, budget }) => {
                             disabled={loading || Object.keys(errors).length > 0}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2'
+                            className='bg-primary text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-gray-400'
                         >
                             {loading ? (
                                 <>

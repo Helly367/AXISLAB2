@@ -13,7 +13,7 @@ function formatMembre(membre) {
     telephone: membre.telephone,
     niveau_etude: membre.niveau_etude,
     sexe: membre.sexe,
-    project_id : membre.project_id,
+    projet_id : membre.projet_id,
     competences: JSON.parse(membre.competences || "[]"),
     created_at: membre.created_at,
     updated_at: membre.updated_at
@@ -147,11 +147,6 @@ export async function getMembreById(id) {
 
 export async function updateMembre(projet_id, updateData) {
     
-    console.log("updateData" , updateData);
-    console.log("projet_id", projet_id);
-    
-    
-
   try {
     const membre_id = updateData.membre_id;
     const cleaned = normalizeMembreDataUp(projet_id , updateData);
@@ -193,32 +188,80 @@ export async function updateMembre(projet_id, updateData) {
 }
 
 
-export async function deleteMembre(projet_id , membre_id) {
+export async function deleteMembre(projet_id, membre_id) {
     console.log("membre_id", membre_id);
     console.log("projet_id", projet_id);
-
-  try {
     
-     
-    await db("membres").where({ projet_id, membre_id }).del(); 
-    const membres = await db("membres").select("*").where({ projet_id}).orderBy("created_at", "desc");
-    console.log("suppression reussit");
+    const projet = await db('projets').where({ projet_id }).first();
+    const membre = await db("membres").where({ projet_id, membre_id }).first();
     
-    return {
-      success: true,
-        data: {
-            membre_id: membre_id,
-            membres : formatMembre(membres) 
-        }
-    };
+    if (!projet) return { success: false, message: "Projet non trouvé" };
+    if (!membre) return { success: false, message: "Membre non trouvé" };
+    
+    console.log("projet" , projet);
+    console.log("membre" , membre);
+    
 
-  } catch (error) {
+    try {
+        await db.transaction(async (trx) => {
+            // 1. Supprimer le membre de toutes les phases où il apparaît
+          const phases = await trx("phases").where({ projet_id });
+          let membresArray = [];
+            
+            for (const phase of phases) {
+              
+              membresArray = phase.membres ? JSON.parse(phase.membres) : [];
+              console.log("membresArray" , membresArray);
+              
+                // Filtrer pour enlever le membre_id
+                const membresMisAJour = membresArray.filter(id => Number(id) != membre_id);
+                
+                // Mettre à jour la phase si changement
+                if (membresArray.length !== membresMisAJour.length) {
+                    await trx("phases")
+                        .where({ projet_id , phase_id: phase.phase_id })
+                        .update({ 
+                            membres: JSON.stringify(membresMisAJour)
+                        });
+                }
+            }
+            
+            // 2. Supprimer le membre de la table membres
+            await trx("membres").where({ projet_id, membre_id }).del();
+        });
+        
+      const [updatedPhase, membresRestants] = await Promise.all([
+        db("phases").where({ projet_id  }).first(),
+        db("membres").where({ projet_id }).first()
+      ]);
+      
+      
+      
+      const resutat = {
+        updatedPhase: updatedPhase,
+        membresRestants : membresRestants
+        
+      }
+      
+      console.log("resutat" , resutat);
+      
+        
+        return {
+            success: true,
+            data: {
+              membre_id: membre_id,
+              phases : updatedPhase ,
+              membres: membresRestants
+            }
+        };
 
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+    } catch (error) {
+        console.error("Erreur lors de la suppression:", error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
 }
 
 

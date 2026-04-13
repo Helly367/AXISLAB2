@@ -10,64 +10,139 @@ import {
     Timeline,
     List
 } from "@mui/icons-material";
+import { useCampagnes } from '../../../hooks/useCampagnes';
+import { alertService } from '../../../Services/alertService';
+import { formateDateChamps, formateMontantSimple, formateDate } from "../../../Services/functions"
 
-const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
+const CampaignPlanning = ({ campagne, onBack, project }) => {
+    const { ajouteEtape, updateEtape, deleteEtape, ajouteCanal } = useCampagnes();
+    const [isAjouteEtape, setIsAjouteEtape] = useState(false);
     const [etapes, setEtapes] = useState(campagne.planification?.etapes || []);
     const [canaux, setCanaux] = useState(campagne.planification?.canaux || []);
-    const [newEtape, setNewEtape] = useState({ nom: '', date_debut: '', date_fin: '' });
     const [newCanal, setNewCanal] = useState('');
+    const [newEtape, setNewEtape] = useState({
+        id: '0123456789',
+        nom: '',
+        date_debut: '',
+        date_fin: '',
+        completed: false
+    });
 
-    const handleAddEtape = () => {
-        if (newEtape.nom && newEtape.date_debut && newEtape.date_fin) {
-            const updatedEtapes = [...etapes, { ...newEtape, completed: false }];
+
+    const handleAddEtape = async () => {
+
+        console.log("newEtape", newEtape);
+
+
+        const result = await ajouteEtape({
+            projet_id: project?.projet_id,
+            campagne_id: campagne.campagne_id,
+            newEtape: newEtape
+        });
+
+        console.log("soso", result);
+
+        if (result && result.success) {
+            const createdEtape = result.newEtapeF;
+            const updatedEtapes = [...etapes, { ...createdEtape }];
+
             setEtapes(updatedEtapes);
-            updateCampagne({ ...campagne, planification: { ...campagne.planification, etapes: updatedEtapes } });
-            setNewEtape({ nom: '', date_debut: '', date_fin: '' });
+            setNewEtape({ id: '0123456789', nom: '', date_debut: '', date_fin: '' });
+            setIsAjouteEtape(false);
         }
+
+
     };
 
-    const handleToggleEtape = (index) => {
+    const handleToggleEtape = async (index) => {
         const updatedEtapes = etapes.map((e, i) =>
             i === index ? { ...e, completed: !e.completed } : e
         );
-        setEtapes(updatedEtapes);
-        updateCampagne({ ...campagne, planification: { ...campagne.planification, etapes: updatedEtapes } });
+
+        const result = await updateEtape({
+            projet_id: project?.projet_id,
+            campagne_id: campagne.campagne_id,
+            updatedEtapes: updatedEtapes
+
+        })
+
+        if (result && result.success) {
+            setEtapes(updatedEtapes);
+        }
+
     };
 
-    const handleDeleteEtape = (index) => {
+    const handleDeleteEtape = async (index) => {
+        console.log("index", index);
         const updatedEtapes = etapes.filter((_, i) => i !== index);
-        setEtapes(updatedEtapes);
-        updateCampagne({ ...campagne, planification: { ...campagne.planification, etapes: updatedEtapes } });
+
+        const result = await deleteEtape({
+            projet_id: project?.projet_id,
+            campagne_id: campagne.campagne_id,
+            updatedEtapes: updatedEtapes
+
+        })
+
+        if (result && result.success) {
+            setEtapes(updatedEtapes);
+        }
+
     };
 
-    const handleAddCanal = () => {
+    const handleAddCanal = async () => {
         if (newCanal) {
             const updatedCanaux = [...canaux, newCanal];
-            setCanaux(updatedCanaux);
-            updateCampagne({ ...campagne, planification: { ...campagne.planification, canaux: updatedCanaux } });
-            setNewCanal('');
+
+            const result = await ajouteCanal({
+                projet_id: project?.projet_id,
+                campagne_id: campagne.campagne_id,
+                newCanal: updatedCanaux
+            });
+
+            console.log("soso", result);
+
+            if (result && result.success) {
+                setCanaux(updatedCanaux);
+                setNewCanal('');
+            }
+
+
+
         }
     };
 
-    const handleDeleteCanal = (index) => {
+    const handleDeleteCanal = async (index) => {
+        console.log("index", index);
+
         const updatedCanaux = canaux.filter((_, i) => i !== index);
-        setCanaux(updatedCanaux);
-        updateCampagne({ ...campagne, planification: { ...campagne.planification, canaux: updatedCanaux } });
+
+        const result = await ajouteCanal({
+            projet_id: project?.projet_id,
+            campagne_id: campagne.campagne_id,
+            newCanal: updatedCanaux
+        });
+
+        console.log("soso", result);
+
+        if (result && result.success) {
+            setCanaux(updatedCanaux);
+            
+        }
+       
     };
 
-    const updateCampagne = (updated) => {
-        onUpdate(updated);
-    };
+
 
     const progression = etapes.length > 0
         ? (etapes.filter(e => e.completed).length / etapes.length * 100).toFixed(0)
         : 0;
 
     return (
-        <div className='bg-gray-200 p-4'>
-            <div className="bg-white rounded-lg shadow-md p-6">
+        <div className='min-h-screen bg-gray-200'>
+            <div className="max-w-8xl  bg-white rounded-lg shadow m-4 px-4 mb-15">
+
                 {/* Header */}
-                <div className="flex items-center gap-4 pb-6 border-b mb-4 bg-white p-2">
+                <div className="flex items-center gap-4 bg-white px-4 py-2">
                     <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full">
                         <ArrowBack />
                     </button>
@@ -78,7 +153,7 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                 </div>
 
                 {/* Progression globale */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4 mt-4">
                     <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-blue-700">Progression de la planification</span>
                         <span className="text-lg font-bold text-blue-700">{progression}%</span>
@@ -91,15 +166,19 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 mb-4">
+
                     {/* Étapes de la campagne */}
-                    <div>
-                        <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <div className='flex flex-col justify-between  mb-8 '>
+
+                        <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 shadow p-2 rounded-[5px]">
                             <Timeline className="text-blue-600" />
                             Étapes de la campagne
                         </h3>
 
-                        <div className="space-y-3 mb-4">
+                        <div className="space-y-3 mb-4 overflow-y-auto h-160 menu">
                             {etapes.map((etape, index) => (
                                 <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                                     <button onClick={() => handleToggleEtape(index)}>
@@ -114,7 +193,7 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                                             {etape.nom}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {new Date(etape.date_debut).toLocaleDateString('fr-FR')} - {new Date(etape.date_fin).toLocaleDateString('fr-FR')}
+                                            {formateDate(etape.date_debut)} - {formateDate(etape.date_fin)}
                                         </p>
                                     </div>
                                     <button
@@ -126,38 +205,76 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                             ))}
                         </div>
 
+
                         {/* Ajout d'étape */}
-                        <div className="bg-gray-50 rounded-lg p-4">
-                            <h4 className="text-sm font-medium text-gray-600 mb-3">Nouvelle étape</h4>
-                            <div className="space-y-3">
-                                <input
-                                    type="text"
-                                    placeholder="Nom de l'étape"
-                                    value={newEtape.nom}
-                                    onChange={(e) => setNewEtape({ ...newEtape, nom: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-lg"
-                                />
-                                <div className="grid grid-cols-2 gap-2">
+                        {isAjouteEtape ? (
+                            <div className="bg-gray-50 rounded-lg p-4 shadow mt-4">
+                                <h4 className="text-sm font-medium text-gray-600 mb-3">Nouvelle étape</h4>
+                                <div className="space-y-3">
                                     <input
-                                        type="date"
-                                        value={newEtape.date_debut}
-                                        onChange={(e) => setNewEtape({ ...newEtape, date_debut: e.target.value })}
-                                        className="p-2 border border-gray-300 rounded-lg"
+                                        type="text"
+                                        placeholder="Nom de l'étape"
+                                        value={newEtape.nom}
+                                        onChange={(e) => setNewEtape({ ...newEtape, nom: e.target.value })}
+                                        className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-400 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allow"
                                     />
-                                    <input
-                                        type="date"
-                                        value={newEtape.date_fin}
-                                        onChange={(e) => setNewEtape({ ...newEtape, date_fin: e.target.value })}
-                                        className="p-2 border border-gray-300 rounded-lg"
-                                    />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className='flex flex-col gap-2 '>
+                                            <label className='text-gray-600 text-sm font-medium'>Date de début</label>
+                                            <input
+                                                type="date"
+                                                value={newEtape.date_debut}
+                                                onChange={(e) => setNewEtape({ ...newEtape, date_debut: e.target.value })}
+                                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-400 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowe"
+                                            />
+
+                                        </div>
+
+                                        <div >
+                                            <label className='text-gray-600 text-sm font-medium'>Date de fin</label>
+                                            <input
+                                                type="date"
+                                                value={newEtape.date_fin}
+                                                onChange={(e) => setNewEtape({ ...newEtape, date_fin: e.target.value })}
+                                                className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-400 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowe"
+                                            />
+                                        </div>
+
+
+                                    </div>
+                                    <div className='flex items-center gap-4 mt-4 '>
+                                        <button
+                                            onClick={() => setIsAjouteEtape(false)}
+                                            className="w-full bg-white text-gray-700 py-2 rounded-lg  flex items-center justify-center gap-2 border border-gray-700">
+                                            Annuler
+                                        </button>
+                                        <button
+                                            onClick={handleAddEtape}
+                                            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
+                                            <Add fontSize="small" /> Ajouter l'étape
+                                        </button>
+                                    </div>
+
                                 </div>
-                                <button
-                                    onClick={handleAddEtape}
-                                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-                                    <Add fontSize="small" /> Ajouter l'étape
-                                </button>
                             </div>
-                        </div>
+
+                        ) : (
+                            <button
+                                onClick={() => setIsAjouteEtape(true)}
+                                className=" bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 self-end font-medium px-2 text-2xd">
+                                Ajouter une étape
+                            </button>
+                        )}
+
+
+
+
                     </div>
 
                     {/* Canaux de diffusion */}
@@ -189,7 +306,9 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                                     placeholder="Ex: Réseaux sociaux, Radio, etc."
                                     value={newCanal}
                                     onChange={(e) => setNewCanal(e.target.value)}
-                                    className="flex-1 p-2 border border-gray-300 rounded-lg"
+                                    className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-400 rounded-xl 
+                           focus:outline-none focus:bg-white focus:border-blue-500
+                           transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowe"
                                 />
                                 <button
                                     onClick={handleAddCanal}
@@ -216,36 +335,7 @@ const CampaignPlanning = ({ campagne, onBack, onUpdate }) => {
                     </div>
                 </div>
 
-                {/* Dates clés */}
-                <div className="mt-6 pt-6 border-t">
-                    <h3 className="font-bold text-gray-700 mb-4">Dates clés</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Début prévu</p>
-                            <p className="font-medium">{new Date(campagne.date_debut).toLocaleDateString('fr-FR')}</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Fin prévue</p>
-                            <p className="font-medium">{new Date(campagne.date_fin).toLocaleDateString('fr-FR')}</p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Début réel</p>
-                            <p className="font-medium">
-                                {campagne.date_debut_reelle
-                                    ? new Date(campagne.date_debut_reelle).toLocaleDateString('fr-FR')
-                                    : 'Non commencé'}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                            <p className="text-xs text-gray-500">Fin réelle</p>
-                            <p className="font-medium">
-                                {campagne.date_fin_reelle
-                                    ? new Date(campagne.date_fin_reelle).toLocaleDateString('fr-FR')
-                                    : 'En cours'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
 

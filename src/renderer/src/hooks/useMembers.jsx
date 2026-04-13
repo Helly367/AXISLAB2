@@ -24,10 +24,6 @@ export const MembresProvider = ({ children }) => {
         setActiveProject(projet_id ? Number(projet_id) : null);
     }, []);
 
-    console.log(activeProject);
-
-
-
     /* =========================
        LOAD PROJECTS
     ========================== */
@@ -204,14 +200,17 @@ export const MembresProvider = ({ children }) => {
         try {
 
             const result = await window.api.deleteMembre(projet_id, membre_id);
-            console.log("result", result);
+
             if (!result.success) throw new Error(result.error);
 
             setMembres(prev => prev.filter(m => m.membre_id !== result.data.membre_id));
             alertService.success(`Membre supprimé !`);
             return {
                 success: true,
-                data: result.data.membres
+                data: {
+                    membres: result.data.membres,
+                    phases: result.data.phases
+                }
             };
 
         } catch (err) {

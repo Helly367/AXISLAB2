@@ -1,10 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Edit, Delete, Code, CurrencyExchange, ShoppingCart, Savings, CalendarToday, Category, AttachMoney, Numbers, More, Close } from "@mui/icons-material";
-import { formateMontantSimple, formatMontant, formateDate } from "../../../Services/functions";
+import { formatMontant, formateDate, getDeviseSymbol } from "../../../Services/functions";
 import ModifyMateriel from "../Materiels/ModifyMateriel";
 import DeleteConfirm from "../../widjets/DeleteConfirm"
-import { useMateriels } from "../../../hooks/useMateriels";
-
 
 
 const MaterielVoirPlus = ({ open, close, materielVoire, setMaterielVOire, phases }) => {
@@ -108,7 +106,7 @@ const TableMateriel = ({ materielsFiltres, devise, handleVoirePlus, setMaterielV
 
 
     return (
-        <div className="w-full overflow-x-auto rounded-xl border border-gray-200 ">
+        <div className="w-full overflow-x-auto overflow-y-auto rounded-xl border border-gray-200  h-100%">
 
             <table className="w-full border-collapse">
                 <thead>
@@ -242,24 +240,18 @@ const TableMateriel = ({ materielsFiltres, devise, handleVoirePlus, setMaterielV
                     })}
                 </tbody>
 
-                {/* Pied de tableau avec totaux
-                        <tfoot className="bg-gray-50 border-t-2 border-gray-200">
-                            <tr>
-                                <td className="p-4 font-semibold text-gray-800">Totaux</td>
-                                <td className="p-4 font-semibold text-gray-800">
-                                    {formatMontant(phases.reduce((acc, p) => acc + (p.budget_phase || 0), 0))} {getDeviseSymbol(devise)}
-                                </td>
-                                <td className="p-4 font-semibold text-gray-800">
-                                    {formatMontant(phases.reduce((acc, p) => acc + (p.budget_consomme || 0), 0))} {getDeviseSymbol(devise)}
-                                </td>
-                                <td className="p-4 font-semibold" colSpan="3">
-                                    <span className={phases.reduce((acc, p) => acc + ((p.budget_phase || 0) - (p.budget_consomme || 0)), 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                        {formatMontant(Math.abs(phases.reduce((acc, p) => acc + ((p.budget_phase || 0) - (p.budget_consomme || 0)), 0)))} {getDeviseSymbol(devise)}
-                                        {phases.reduce((acc, p) => acc + ((p.budget_phase || 0) - (p.budget_consomme || 0)), 0) < 0 && ' (dépassement total)'}
-                                    </span>
-                                </td>
-                            </tr>
-                        </tfoot> */}
+                {/* Pied de tableau avec totaux */}
+                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                    <tr>
+                        <td className="p-4 font-semibold text-gray-800">Totaux</td>
+                        <td className="p-4 font-semibold text-gray-800 text-2xd">
+                            {formatMontant(materielsFiltres.reduce((acc, m) => acc + (m.prix || 0) * (m.quantite || 0), 0))}  {devise}
+                        </td>
+
+
+
+                    </tr>
+                </tfoot>
             </table>
         </div>
     )
@@ -274,8 +266,43 @@ const MaterielCard = ({ materiels, devise, phases, project, budget, deleteMateri
     const [materielVoire, setMaterielVOire] = useState(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const materielsFiltres = filter === 0 ? materiels : materiels.filter(m => m.phase_id === filter);
+
+    const PhasesDuProjet = useMemo(() => {
+        if (!Array.isArray(phases) || !project?.projet_id) return [];
+        return phases.filter(m => m?.projet_id === project.projet_id);
+    }, [phases, project?.projet_id]);
+
+    const materielsFiltres = useMemo(() => {
+        if (!Array.isArray(materiels)) return [];
+
+        return materiels.filter(materiel => {
+            if (!materiel) return false;
+
+            // 🔍 FILTRE RECHERCHE
+            const search = searchTerm.toLowerCase();
+            const matchSearch =
+                !searchTerm ||
+                materiel.nom?.toLowerCase().includes(search) ||
+                materiel.categorie?.toLowerCase().includes(search) ||
+                materiel.description?.toLowerCase().includes(search) ||
+                String(materiel.prix).replace(/\s/g, '').includes(search) ||
+                materiel.fournisseur?.toLowerCase().includes(search);
+
+
+            // 🎯 FILTRE PHASE
+            const matchPhase =
+                !filter || filter == 0
+                    ? true
+                    : materiel.phase_id === Number(filter);
+
+            return matchSearch && matchPhase;
+        });
+    }, [materiels, searchTerm, filter]);
+
+    console.log(filter);
+
 
 
 
@@ -297,7 +324,13 @@ const MaterielCard = ({ materiels, devise, phases, project, budget, deleteMateri
         }
 
         // ✅ Correction : result.data est directement la phase mise à jour
-        setPhases(prev => [...prev, result.phase]);
+        setPhases(prev =>
+            Array.isArray(prev)
+                ? prev.map(p =>
+                    p.phase_id === result.data.phase.phase_id ? result.data.phase : p
+                )
+                : []
+        );
         handleClose();
     }
 
@@ -315,15 +348,31 @@ const MaterielCard = ({ materiels, devise, phases, project, budget, deleteMateri
             <div className="flex items-center w-full gap-4">
                 <input type="text"
                     placeholder="recherchez un materiel"
+                    value={searchTerm}
+                    maxLength={80} // limite stricte
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value)
+                        if (e.target.value.length > 80) {
+                            e.target.value = e.target.value.slice(0, 80);
+                        }
+
+                    }}
                     className="w-full px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                            focus:outline-none focus:bg-white focus:border-blue-500
                            transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <select name="" id=""
+                    onChange={(e) => setFilter(e.target.value)}
                     className="w-80 px-5 py-3 bg-gray-50 border-2 border-gray-300 rounded-xl 
                            focus:outline-none focus:bg-white focus:border-blue-500
                            transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <option value="">Filtrer par phase</option>
+                    <option value="0">Toutes les phases</option>
+                    {PhasesDuProjet.map(phase => (
+                        <option key={phase.phase_id} value={phase.phase_id}>
+                            {phase.title}
+                        </option>
+                    ))}
+
 
 
                 </select>

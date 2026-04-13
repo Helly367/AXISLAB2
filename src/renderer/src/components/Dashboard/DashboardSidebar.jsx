@@ -17,18 +17,21 @@ import {
     TrendingUp
 } from "@mui/icons-material";
 import { useProjects } from "../../hooks/useProjets";
+import { useMembres } from "../../hooks/useMembers";
+import { useMateriels } from "../../hooks/useMateriels";
+import { useCampagnes } from "../../hooks/useCampagnes";
 
-const DashboardSidebar = ({
-    membersCount = 0,
-    materielsCount = 0,
-    tasksEnCours = 0,
-    campagnesEnCours = 0,
-    notificationsCount = 0
-}) => {
+const DashboardSidebar = ({ tasksEnCours = 0, notificationsCount = 0 }) => {
     const { projet_id: paramProjetId } = useParams();
     const { activeProject } = useProjects();
     const [collapsed, setCollapsed] = useState(false);
+    const { membres } = useMembres();
+    const { materiels } = useMateriels();
+    const { campagnes } = useCampagnes();
 
+    const membersCount = membres.length;
+    const materielsCount = materiels.length;
+    const campagnesEnCours = campagnes.length;
     // On sécurise le projet_id pour construire les paths
     const projetId = paramProjetId || activeProject?.projet_id || "default";
 
@@ -77,7 +80,7 @@ const DashboardSidebar = ({
     return (
         <div className={`h-full ${collapsed ? "w-20" : "w-60"} bg-white shadow-lg flex flex-col transition-all duration-300 ease-in-out`}>
             {/* HEADER */}
-            <div className="flex items-center justify-between p-4 flex-shrink-0">
+            <div className="flex items-center justify-between p-4 shrink-0">
                 {!collapsed && (
                     <h2 className="text-lg font-bold text-blue-600 transition-opacity duration-200">Axis Lab</h2>
                 )}

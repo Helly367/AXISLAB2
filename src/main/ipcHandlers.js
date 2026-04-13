@@ -13,7 +13,9 @@ import { createDependency, getAllDependencies, getDependenciesByProject, deleteD
 import { createJalon, getAllJalons, updateJalon, deletejalon } from './handlers/jalonHandlers.js';
 import { createMembre ,deleteMembre , getAllMembres ,getMembreById , updateMembre } from './handlers/membreHandlers.js';
 import { loadBudgets, convertionBudget, configureBudget } from "./handlers/budgetHandlers.js";
-import { createMateriel, loadAllMateriels , updateMateriel , deleteMateriel} from "./handlers/materielHandlers.js";
+import { createMateriel, loadAllMateriels, updateMateriel, deleteMateriel } from "./handlers/materielHandlers.js";
+
+import { createCampagne ,getAllCampagnes , ajouteEtape , updateEtape  ,deleteEtape ,ajouteCanal} from './handlers/campagnesHandlers.js';
 
 
 export function setupIpcHandlers() {
@@ -170,6 +172,41 @@ ipcMain.handle("dependency-delete", (_, id) =>
   
   ipcMain.handle('delete-materiel', async (_, projet_id, materiel_id, phase_id) => {
     return await deleteMateriel(projet_id, materiel_id, phase_id);
+  });
+  
+  
+  // /* ===============================
+  //   CAMPAGNES HANDLERS
+  // =============================== */
+ 
+  
+  ipcMain.handle('get-AllCampagnes', async (_, projet_id) => {
+    return await getAllCampagnes(projet_id);
+  });
+  
+  ipcMain.handle('create-campagne', async (_, campagneData) => {
+    return await createCampagne(campagneData);
+  });
+  
+  ipcMain.handle('ajoute-etape', async (_,projet_id ,  campagne_id , newEtape) => {
+     return await ajouteEtape(projet_id, campagne_id,newEtape);
+  });
+  
+  ipcMain.handle('update-etape', async (_,projet_id ,  campagne_id , updatedEtapes) => {
+     return await updateEtape(projet_id, campagne_id, updatedEtapes);
+  });
+  
+  ipcMain.handle('delete-etape', async (_,projet_id ,  campagne_id , data) => {
+     return await deleteEtape(projet_id, campagne_id, data);
+  });
+  
+  
+  ipcMain.handle('ajoute-canal', async (_,projet_id ,  campagne_id , newCanal) => {
+     return await ajouteCanal(projet_id, campagne_id, newCanal);
+  });
+  
+  ipcMain.handle('delete-canal', async (_,projet_id ,  campagne_id , data) => {
+     return await deleteCanal(projet_id, campagne_id, data);
   });
   
 
